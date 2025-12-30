@@ -64,7 +64,7 @@ const AstrologerChatPage = () => {
         const decoded: any = jwtDecode(token);
         setAstrologerId(decoded.id);
 
-        const socket = io("https://astrologyapp-1.onrender.com", {
+        const socket = io("https://astro-backend-qdu5.onrender.com", {
           transports: ["websocket"],
         });
         socketRef.current = socket;

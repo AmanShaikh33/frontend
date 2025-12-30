@@ -86,7 +86,8 @@ export default function ChatPage() {
           pricePerMinute: roomRes.pricePerMinute,
         });
 
-        socket.emit("requestChat", {
+        // Send chat request to astrologer
+        socket.emit("userRequestsChat", {
           astrologerId,
           userId: decoded.id,
           roomId,

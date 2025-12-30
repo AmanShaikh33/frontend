@@ -14,8 +14,9 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { apiGetUserChats } from "../../../api/api";
 import { io } from "socket.io-client";
+import jwtDecode from "jwt-decode";
 
-const socket = io("https://astrologyapp-1.onrender.com", { transports: ["websocket"] });
+const socket = io("https://astro-backend-qdu5.onrender.com", { transports: ["websocket"] });
 
 interface ChatPreview {
   _id: string;
@@ -66,6 +67,17 @@ export default function ChatListPage() {
   // SOCKET: LISTEN FOR NEW CHAT REQUEST
   // ------------------------------
   useEffect(() => {
+    const setupSocket = async () => {
+      // Register astrologer as online
+      const token = await AsyncStorage.getItem("token");
+      if (token) {
+        const decoded: any = jwtDecode(token);
+        socket.emit("astrologerOnline", { astrologerId: decoded.id });
+      }
+    };
+
+    setupSocket();
+
     socket.on("incomingChatRequest", (data) => {
       console.log("🔥 New chat request:", data);
 
