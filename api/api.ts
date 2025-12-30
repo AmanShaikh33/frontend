@@ -3,8 +3,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 
 
-const API_URL = "https://astrologyapp-1.onrender.com/api"; // Replace with your backend URL
-// const API_URL = "http://localhost:5000/api"; // For iOS simulator
+const API_URL = "https://astro-backend-qdu5.onrender.com/api"; // Replace with your backend URL
+// const API_URL = "http://localhost:5000/api"; // For local development
 
 const api = axios.create({
   baseURL: API_URL,

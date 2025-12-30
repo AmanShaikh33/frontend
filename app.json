@@ -15,7 +15,7 @@
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE"
       },
-      "package": "com.amanshaikh33.frontend"
+      "package": "com.amanshaikh33.frontend.prod"
     },
     "web": {
       "output": "static",
