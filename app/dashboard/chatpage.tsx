@@ -72,7 +72,7 @@ export default function ChatPage() {
         setPricePerMinute(roomRes.pricePerMinute || 0);
         setUserCoins(roomRes.userCoins || parsedUser.coins || 0);
 
-        const socket = io("https://astrologyapp-1.onrender.com", {
+        const socket = io("https://astro-backend-qdu5.onrender.com", {
           transports: ["websocket"],
         });
 

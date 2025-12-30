@@ -245,7 +245,7 @@ export const apiAdminDeleteAstrologer = async (token: string, id: string) => {
 export const apiCreateOrGetChatRoom = async (token, astrologerId = null, userId = null) => {
   const body = astrologerId ? { astrologerId } : { userId };
 
-  const response = await fetch("http://10.77.193.71:5000/api/chat/create-room", {
+  const response = await fetch("https://astro-backend-qdu5.onrender.com/api/chat/create-room", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

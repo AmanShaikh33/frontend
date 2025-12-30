@@ -102,6 +102,7 @@ const Chat = () => {
               status={astro.availability}
               waitTime={astro.waitTime}
               profilePic={astro.profilePic}
+              onChatPress={() => router.push(`/dashboard/chatpage?astrologerId=${astro._id}`)}
             />
           ))
         )}

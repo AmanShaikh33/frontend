@@ -39,7 +39,7 @@ const AstrologerCard: React.FC<Props> = ({
     profilePic && profilePic.startsWith("http")
       ? profilePic
       : profilePic
-      ? `https://astrologyapp-1.onrender.com/${profilePic.replace(/\\/g, "/")}`
+      ? `https://astro-backend-qdu5.onrender.com/${profilePic.replace(/\\/g, "/")}`
       : null;
 
   return (
