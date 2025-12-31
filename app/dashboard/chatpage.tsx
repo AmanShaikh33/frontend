@@ -1,21 +1,23 @@
+// app/dashboard/chatpage.tsx
+
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import jwtDecode from "jwt-decode";
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
-  FlatList,
-  KeyboardAvoidingView,
-  Platform,
+  View,
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  FlatList,
   SafeAreaView,
   Alert,
   StyleSheet,
 } from "react-native";
 import { io, Socket } from "socket.io-client";
 import { apiCreateOrGetChatRoom, apiGetMessages } from "../../api/api";
+
+const SOCKET_URL = "https://astro-backend-qdu5.onrender.com";
 
 interface Message {
   _id?: string;
@@ -24,112 +26,68 @@ interface Message {
   content: string;
 }
 
-export default function ChatPage() {
-  const router = useRouter();
+export default function UserChatPage() {
   const { astrologerId } = useLocalSearchParams<{ astrologerId: string }>();
+  const router = useRouter();
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [chatRoomId, setChatRoomId] = useState("");
   const [newMessage, setNewMessage] = useState("");
   const [userId, setUserId] = useState("");
-  const [pricePerMinute, setPricePerMinute] = useState(0);
-  const [userCoins, setUserCoins] = useState(0);
   const [astroJoined, setAstroJoined] = useState(false);
-  const [timer, setTimer] = useState(60);
 
   const socketRef = useRef<Socket | null>(null);
-  const flatListRef = useRef<FlatList>(null);
 
-  // ---------------- TIMER ----------------
   useEffect(() => {
-    if (!astroJoined) return;
+    const init = async () => {
+      const token = await AsyncStorage.getItem("token");
+      const userStr = await AsyncStorage.getItem("userData");
+      if (!token || !userStr || !astrologerId) return;
 
-    const interval = setInterval(() => {
-      setTimer((prev) => (prev === 1 ? 60 : prev - 1));
-    }, 1000);
+      const decoded: any = jwtDecode(token);
+      setUserId(decoded.id);
 
-    return () => clearInterval(interval);
-  }, [astroJoined]);
+      const room = await apiCreateOrGetChatRoom(token, astrologerId);
+      const roomId = room._id;
+      setChatRoomId(roomId);
 
-  // ---------------- SETUP CHAT ----------------
-  useEffect(() => {
-    const setupChat = async () => {
-      try {
-        const token = await AsyncStorage.getItem("token");
-        const userStr = await AsyncStorage.getItem("userData");
+      const socket = io(SOCKET_URL, { transports: ["websocket"] });
+      socketRef.current = socket;
 
-        if (!token || !astrologerId || !userStr) return;
+      socket.emit("joinRoom", { roomId });
 
-        const decoded: any = jwtDecode(token);
-        setUserId(decoded.id);
+      socket.emit("requestChat", {
+        roomId,
+        astrologerId,
+        userId: decoded.id,
+        userName: JSON.parse(userStr).name,
+      });
 
-        const parsedUser = JSON.parse(userStr);
+      socket.emit("participant-joined", {
+        roomId,
+        role: "user",
+      });
 
-        const roomRes = await apiCreateOrGetChatRoom(token, astrologerId);
-        const roomId = roomRes.chatRoomId || roomRes._id;
+      socket.on("participant-joined", ({ role }) => {
+        if (role === "astrologer") setAstroJoined(true);
+      });
 
-        setChatRoomId(roomId);
-        setPricePerMinute(roomRes.pricePerMinute || 0);
-        setUserCoins(roomRes.userCoins || parsedUser.coins || 0);
+      socket.on("receiveMessage", (msg: Message) => {
+        setMessages((prev) => [...prev, msg]);
+      });
 
-        const socket = io("https://astro-backend-qdu5.onrender.com", {
-          transports: ["websocket"],
-        });
-
-        socketRef.current = socket;
-
-        socket.emit("joinRoom", { roomId });
-
-        socket.emit("user-joined", {
-          roomId,
-          userId: decoded.id,
-          pricePerMinute: roomRes.pricePerMinute,
-        });
-
-        // Send chat request to astrologer
-        socket.emit("userRequestsChat", {
-          astrologerId,
-          userId: decoded.id,
-          roomId,
-          userName: parsedUser.name,
-        });
-
-        const msgs = await apiGetMessages(token, roomId);
-        setMessages(msgs);
-
-        socket.on("astroJoinedRoom", () => setAstroJoined(true));
-
-        socket.on("receiveMessage", (msg: Message) => {
-          setMessages((prev) => {
-            if (prev.some((m) => m._id === msg._id)) return prev;
-            return [...prev, msg];
-          });
-        });
-
-        socket.on("coinsUpdated", setUserCoins);
-
-        socket.on("endChatDueToLowBalance", () => {
-          Alert.alert("Balance Low", "Chat ended due to low balance.", [
-            { text: "OK", onPress: () => router.back() },
-          ]);
-        });
-      } catch (err: any) {
-        console.log("Chat setup error:", err.message);
-      }
+      const msgs = await apiGetMessages(token, roomId);
+      setMessages(msgs);
     };
 
-    setupChat();
+    init();
 
-    return () => {
-      socketRef.current?.disconnect();
-      socketRef.current = null;
-    };
+    return () => socketRef.current?.disconnect();
   }, [astrologerId]);
 
-  // ---------------- SEND MESSAGE ----------------
-  const handleSend = () => {
+  const sendMessage = () => {
     if (!astroJoined) {
-      Alert.alert("Please wait", "Astrologer has not joined yet.");
+      Alert.alert("Waiting", "Astrologer has not joined yet.");
       return;
     }
 
@@ -139,7 +97,7 @@ export default function ChatPage() {
       chatRoomId,
       senderId: userId,
       receiverId: astrologerId,
-      content: newMessage.trim(),
+      content: newMessage,
     });
 
     setNewMessage("");
@@ -147,121 +105,47 @@ export default function ChatPage() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* HEADER */}
-      <View style={styles.header}>
-        <Text style={styles.headerText}>Coins: {userCoins}</Text>
+      <Text style={styles.header}>
+        {astroJoined ? "Astrologer Connected" : "Waiting for astrologer..."}
+      </Text>
 
-        {astroJoined ? (
-          <>
-            <Text style={styles.subText}>Price/Min: ₹{pricePerMinute}</Text>
-            <Text style={styles.timer}>Next charge in: {timer}s</Text>
-          </>
-        ) : (
-          <Text style={styles.waitText}>⏳ Waiting for astrologer…</Text>
-        )}
-      </View>
-
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-      >
-        <FlatList
-          ref={flatListRef}
-          data={messages}
-          keyExtractor={(item, i) => item._id ?? i.toString()}
-          contentContainerStyle={{ paddingBottom: 80, paddingTop: 10 }}
-          renderItem={({ item }) => {
-            const mine = String(item.senderId) === String(userId);
-
-            return (
-              <View
-                style={[
-                  styles.messageBubble,
-                  mine ? styles.mine : styles.theirs,
-                ]}
-              >
-                <Text>{item.content}</Text>
-              </View>
-            );
-          }}
-          onContentSizeChange={() =>
-            flatListRef.current?.scrollToEnd({ animated: true })
-          }
-        />
-
-        {/* INPUT */}
-        <View style={styles.inputBar}>
-          <TextInput
-            value={newMessage}
-            onChangeText={setNewMessage}
-            placeholder={astroJoined ? "Type a message…" : "Waiting…"}
-            editable={astroJoined}
-            style={styles.input}
-          />
-          <TouchableOpacity
-            onPress={handleSend}
-            disabled={!astroJoined}
+      <FlatList
+        data={messages}
+        keyExtractor={(i, idx) => i._id ?? idx.toString()}
+        renderItem={({ item }) => (
+          <View
             style={[
-              styles.sendBtn,
-              { backgroundColor: astroJoined ? "#007AFF" : "#aaa" },
+              styles.msg,
+              item.senderId === userId ? styles.mine : styles.theirs,
             ]}
           >
-            <Text style={styles.sendText}>Send</Text>
-          </TouchableOpacity>
-        </View>
-      </KeyboardAvoidingView>
+            <Text>{item.content}</Text>
+          </View>
+        )}
+      />
+
+      <View style={styles.inputBar}>
+        <TextInput
+          style={styles.input}
+          value={newMessage}
+          onChangeText={setNewMessage}
+          editable={astroJoined}
+        />
+        <TouchableOpacity onPress={sendMessage} disabled={!astroJoined}>
+          <Text style={styles.send}>Send</Text>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f2f2f2" },
-
-  header: {
-    padding: 14,
-    backgroundColor: "white",
-    borderBottomWidth: 1,
-    borderColor: "#ddd",
-  },
-  headerText: { fontSize: 18, fontWeight: "bold" },
-  subText: { marginTop: 4, color: "#555" },
-  timer: { marginTop: 4, color: "green" },
-  waitText: { marginTop: 6, color: "orange" },
-
-  messageBubble: {
-    maxWidth: "75%",
-    padding: 10,
-    marginVertical: 4,
-    borderRadius: 14,
-  },
-  mine: {
-    alignSelf: "flex-end",
-    backgroundColor: "#DCF8C6",
-  },
-  theirs: {
-    alignSelf: "flex-start",
-    backgroundColor: "#ECECEC",
-  },
-
-  inputBar: {
-    position: "absolute",
-    bottom: 10,
-    left: 10,
-    right: 10,
-    flexDirection: "row",
-    backgroundColor: "white",
-    borderRadius: 25,
-    padding: 8,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#ccc",
-  },
-  input: { flex: 1, paddingHorizontal: 10, fontSize: 16 },
-  sendBtn: {
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: 20,
-    marginLeft: 8,
-  },
-  sendText: { color: "white", fontWeight: "bold" },
+  container: { flex: 1 },
+  header: { padding: 10, fontWeight: "bold" },
+  msg: { padding: 10, margin: 5, borderRadius: 10 },
+  mine: { backgroundColor: "#DCF8C6", alignSelf: "flex-end" },
+  theirs: { backgroundColor: "#EEE", alignSelf: "flex-start" },
+  inputBar: { flexDirection: "row", padding: 10 },
+  input: { flex: 1, borderWidth: 1, borderRadius: 20, paddingHorizontal: 10 },
+  send: { marginLeft: 10, color: "blue", fontWeight: "bold" },
 });
