@@ -1,9 +1,7 @@
-// app/dashboard/chatpage.tsx
-
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
 import jwtDecode from "jwt-decode";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -14,10 +12,8 @@ import {
   Alert,
   StyleSheet,
 } from "react-native";
-import { io, Socket } from "socket.io-client";
+import { socket } from "../../lib/socket";
 import { apiCreateOrGetChatRoom, apiGetMessages } from "../../api/api";
-
-const SOCKET_URL = "https://astro-backend-qdu5.onrender.com";
 
 interface Message {
   _id?: string;
@@ -28,15 +24,12 @@ interface Message {
 
 export default function UserChatPage() {
   const { astrologerId } = useLocalSearchParams<{ astrologerId: string }>();
-  const router = useRouter();
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [chatRoomId, setChatRoomId] = useState("");
   const [newMessage, setNewMessage] = useState("");
   const [userId, setUserId] = useState("");
   const [astroJoined, setAstroJoined] = useState(false);
-
-  const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
     const init = async () => {
@@ -46,29 +39,15 @@ export default function UserChatPage() {
 
       const decoded: any = jwtDecode(token);
       setUserId(decoded.id);
+      const parsedUser = JSON.parse(userStr);
 
       const room = await apiCreateOrGetChatRoom(token, astrologerId);
       const roomId = room._id;
       setChatRoomId(roomId);
 
-      const socket = io(SOCKET_URL, { transports: ["websocket"] });
-      socketRef.current = socket;
-
-      socket.emit("joinRoom", { roomId });
-
-      socket.emit("requestChat", {
-        roomId,
-        astrologerId,
-        userId: decoded.id,
-        userName: JSON.parse(userStr).name,
-      });
-
-      socket.emit("participant-joined", {
-        roomId,
-        role: "user",
-      });
-
+      // Setup socket listeners first
       socket.on("participant-joined", ({ role }) => {
+        console.log("👥 Participant joined:", role);
         if (role === "astrologer") setAstroJoined(true);
       });
 
@@ -76,13 +55,63 @@ export default function UserChatPage() {
         setMessages((prev) => [...prev, msg]);
       });
 
+      // Connect and wait for connection
+      if (!socket.connected) {
+        socket.connect();
+      }
+
+      // Wait for connection then emit events
+      socket.on("connect", () => {
+        console.log("🔌 User socket connected");
+        
+        socket.emit("joinRoom", { roomId });
+        console.log("👥 User joined room:", roomId);
+
+        socket.emit("userRequestsChat", {
+          astrologerId,
+          userId: decoded.id,
+          roomId,
+          userName: parsedUser.name,
+        });
+        console.log("🔥 USER CHAT REQUEST SENT:", { astrologerId, userId: decoded.id });
+
+        socket.emit("participant-joined", {
+          roomId,
+          role: "user",
+          userId: decoded.id,
+        });
+        console.log("✅ User participant-joined emitted");
+      });
+
+      // If already connected, emit immediately
+      if (socket.connected) {
+        console.log("🔌 User socket already connected, emitting events");
+        socket.emit("joinRoom", { roomId });
+        socket.emit("userRequestsChat", {
+          astrologerId,
+          userId: decoded.id,
+          roomId,
+          userName: parsedUser.name,
+        });
+        socket.emit("participant-joined", {
+          roomId,
+          role: "user",
+          userId: decoded.id,
+        });
+        console.log("🔥 USER CHAT REQUEST SENT (already connected):", { astrologerId, userId: decoded.id });
+      }
+
       const msgs = await apiGetMessages(token, roomId);
       setMessages(msgs);
     };
 
     init();
 
-    return () => socketRef.current?.disconnect();
+    return () => {
+      socket.off("participant-joined");
+      socket.off("receiveMessage");
+      socket.off("connect");
+    };
   }, [astrologerId]);
 
   const sendMessage = () => {
@@ -93,7 +122,7 @@ export default function UserChatPage() {
 
     if (!newMessage.trim()) return;
 
-    socketRef.current?.emit("sendMessage", {
+    socket.emit("sendMessage", {
       chatRoomId,
       senderId: userId,
       receiverId: astrologerId,

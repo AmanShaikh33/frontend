@@ -13,12 +13,9 @@ import {
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
-import jwtDecode from "jwt-decode";
-import { io, Socket } from "socket.io-client";
-import { apiGetUserChats } from "../../../api/api";
 import { Ionicons } from "@expo/vector-icons";
-
-const SOCKET_URL = "https://astro-backend-qdu5.onrender.com";
+import { apiGetUserChats, apiGetMyProfile } from "../../../api/api";
+import { socket } from "../../../lib/socket";
 
 interface ChatPreview {
   _id: string;
@@ -36,25 +33,37 @@ export default function AstrologerChatList() {
   const [highlightUser, setHighlightUser] = useState<string | null>(null);
 
   const router = useRouter();
-  const socketRef = React.useRef<Socket | null>(null);
 
-  /* ---------------- INIT ---------------- */
   useEffect(() => {
     const init = async () => {
       const token = await AsyncStorage.getItem("token");
       if (!token) return;
 
-      const decoded: any = jwtDecode(token);
+      // 1️⃣ Fetch astrologer profile ONCE
+      const profile = await apiGetMyProfile(token);
+      const astrologerId = profile._id;
 
-      const socket = io(SOCKET_URL, { transports: ["websocket"] });
-      socketRef.current = socket;
+      // 2️⃣ Connect socket if needed
+      if (!socket.connected) {
+        socket.connect();
+      }
 
-      // 🔑 JOIN PERSONAL ASTRO ROOM
-      socket.emit("joinAstrologer", {
-        astrologerId: decoded.id,
+      // 3️⃣ Wait for connection then register astrologer
+      socket.on("connect", () => {
+        console.log("🔌 Astrologer socket connected");
+        socket.emit("astrologerOnline", { astrologerId });
+        console.log("🟮 ASTROLOGER ONLINE EMITTED:", astrologerId);
       });
 
+      // If already connected, emit immediately
+      if (socket.connected) {
+        socket.emit("astrologerOnline", { astrologerId });
+        console.log("🟮 ASTROLOGER ONLINE EMITTED (already connected):", astrologerId);
+      }
+
+      // 4️⃣ Listen for chat requests
       socket.on("incomingChatRequest", (data) => {
+        console.log("🔥 CHAT REQUEST RECEIVED:", data);
         setIncomingRequest(data);
         setHighlightUser(data.userId);
         Vibration.vibrate(400);
@@ -67,29 +76,28 @@ export default function AstrologerChatList() {
 
     init();
 
-    return () => socketRef.current?.disconnect();
+    return () => {
+      socket.off("incomingChatRequest");
+      socket.off("connect");
+    };
   }, []);
 
-  /* ---------------- FETCH CHATS ---------------- */
   const refreshChats = async (token: string) => {
     const res = await apiGetUserChats(token);
     setChats(res);
   };
 
-  /* ---------------- OPEN CHAT ---------------- */
   const openChat = (userId: string) => {
     setHighlightUser(null);
     router.push(`/astrologerdashboard/chatpage?userId=${userId}`);
   };
 
-  /* ---------------- ACCEPT MODAL ---------------- */
   const acceptChat = () => {
     if (!incomingRequest) return;
     openChat(incomingRequest.userId);
     setIncomingRequest(null);
   };
 
-  /* ---------------- UI ---------------- */
   if (loading) {
     return (
       <View style={styles.center}>
@@ -102,7 +110,6 @@ export default function AstrologerChatList() {
     <View style={styles.container}>
       <Text style={styles.header}>Incoming Chats</Text>
 
-      {/* Modal */}
       <Modal visible={!!incomingRequest} transparent>
         <View style={styles.overlay}>
           <View style={styles.modal}>
@@ -153,7 +160,6 @@ const styles = StyleSheet.create({
   container: { flex: 1, paddingTop: 50, paddingHorizontal: 15 },
   header: { fontSize: 22, fontWeight: "bold", marginBottom: 10 },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
-
   chatItem: {
     flexDirection: "row",
     padding: 12,
@@ -164,7 +170,6 @@ const styles = StyleSheet.create({
   },
   highlight: { backgroundColor: "#ffe7a0" },
   name: { fontWeight: "bold" },
-
   overlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.5)",
@@ -174,7 +179,6 @@ const styles = StyleSheet.create({
   modal: { backgroundColor: "#fff", padding: 20, borderRadius: 12 },
   title: { fontSize: 18, fontWeight: "bold", marginBottom: 10 },
   row: { flexDirection: "row", justifyContent: "space-between" },
-
   accept: {
     backgroundColor: "#2d1e3f",
     padding: 10,

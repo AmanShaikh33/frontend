@@ -80,22 +80,10 @@ const AstrologerCard: React.FC<Props> = ({
         </Text>
       </View>
 
-      {/* Chat Button */}
-      {status === "online" ? (
-        <TouchableOpacity style={styles.chatBtn} onPress={onChatPress}>
-          <Text style={styles.chatText}>Chat</Text>
-        </TouchableOpacity>
-      ) : (
-        <View style={styles.offlineWrap}>
-          <TouchableOpacity style={styles.chatDisabled}>
-            <Text style={styles.chatDisabledText}>Chat</Text>
-          </TouchableOpacity>
-
-          {waitTime && (
-            <Text style={styles.waitText}>wait ~{waitTime}</Text>
-          )}
-        </View>
-      )}
+      {/* Chat Button - Temporarily always enabled for testing */}
+      <TouchableOpacity style={styles.chatBtn} onPress={onChatPress}>
+        <Text style={styles.chatText}>Chat</Text>
+      </TouchableOpacity>
     </View>
   );
 };

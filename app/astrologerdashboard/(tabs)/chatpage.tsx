@@ -1,6 +1,6 @@
 // app/astrologerdashboard/chatpage.tsx
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -11,16 +11,14 @@ import {
   Alert,
   StyleSheet,
 } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import jwtDecode from "jwt-decode";
-import { io, Socket } from "socket.io-client";
+import { socket } from "../../../lib/socket";
 import {
   apiCreateOrGetChatRoom,
   apiGetMessages,
 } from "../../../api/api";
-
-const SOCKET_URL = "https://astro-backend-qdu5.onrender.com";
 
 interface Message {
   _id?: string;
@@ -31,15 +29,12 @@ interface Message {
 
 export default function AstrologerChatPage() {
   const { userId } = useLocalSearchParams<{ userId: string }>();
-  const router = useRouter();
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [chatRoomId, setChatRoomId] = useState("");
   const [newMessage, setNewMessage] = useState("");
   const [astrologerId, setAstrologerId] = useState("");
   const [userJoined, setUserJoined] = useState(false);
-
-  const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
     const init = async () => {
@@ -53,18 +48,24 @@ export default function AstrologerChatPage() {
       const roomId = room._id;
       setChatRoomId(roomId);
 
-      const socket = io(SOCKET_URL, { transports: ["websocket"] });
-      socketRef.current = socket;
+      // ✅ Ensure socket is connected
+      if (!socket.connected) {
+        socket.connect();
+      }
 
+      // ✅ Join same room as user
       socket.emit("joinRoom", { roomId });
 
       socket.emit("participant-joined", {
         roomId,
         role: "astrologer",
+        astrologerId: decoded.id,
       });
 
       socket.on("participant-joined", ({ role }) => {
-        if (role === "user") setUserJoined(true);
+        if (role === "user") {
+          setUserJoined(true);
+        }
       });
 
       socket.on("receiveMessage", (msg: Message) => {
@@ -77,7 +78,10 @@ export default function AstrologerChatPage() {
 
     init();
 
-    return () => socketRef.current?.disconnect();
+    return () => {
+      socket.off("participant-joined");
+      socket.off("receiveMessage");
+    };
   }, [userId]);
 
   const sendMessage = () => {
@@ -88,7 +92,7 @@ export default function AstrologerChatPage() {
 
     if (!newMessage.trim()) return;
 
-    socketRef.current?.emit("sendMessage", {
+    socket.emit("sendMessage", {
       chatRoomId,
       senderId: astrologerId,
       receiverId: userId,
@@ -137,12 +141,40 @@ export default function AstrologerChatPage() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  header: { padding: 10, fontWeight: "bold" },
-  msg: { padding: 10, margin: 5, borderRadius: 10 },
+  container: { flex: 1, backgroundColor: "#f8f8f8" },
+  header: {
+    padding: 15,
+    fontWeight: "bold",
+    fontSize: 16,
+    backgroundColor: "white",
+    borderBottomWidth: 1,
+    borderBottomColor: "#ddd",
+  },
+  msg: {
+    padding: 12,
+    margin: 8,
+    borderRadius: 15,
+    maxWidth: "80%",
+  },
   mine: { backgroundColor: "#DCF8C6", alignSelf: "flex-end" },
   theirs: { backgroundColor: "#EEE", alignSelf: "flex-start" },
-  inputBar: { flexDirection: "row", padding: 10 },
-  input: { flex: 1, borderWidth: 1, borderRadius: 20, paddingHorizontal: 10 },
-  send: { marginLeft: 10, color: "blue", fontWeight: "bold" },
+  inputBar: {
+    flexDirection: "row",
+    padding: 15,
+    backgroundColor: "white",
+    borderTopWidth: 1,
+    borderTopColor: "#ddd",
+  },
+  input: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 25,
+    paddingHorizontal: 15,
+  },
+  send: {
+    marginLeft: 15,
+    color: "#007AFF",
+    fontWeight: "bold",
+    fontSize: 16,
+  },
 });

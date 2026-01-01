@@ -160,6 +160,7 @@ export default function HomeScreen() {
               <AstrologerComponent
                 key={astro._id}
                 {...astro}
+                status={astro.availability}
                 price={astro.pricePerMinute}
                 onChatPress={() => {
                   setSelectedAstro(astro);

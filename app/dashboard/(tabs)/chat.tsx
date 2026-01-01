@@ -5,9 +5,11 @@ import {
   ScrollView,
   ActivityIndicator,
   StyleSheet,
+  TouchableOpacity,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { BlurView } from "expo-blur";
 import AstrologerComponent from "../../../components/astrologercomponents";
 import { apiGetApprovedAstrologers } from "../../../api/api";
 
@@ -26,11 +28,17 @@ type AstrologerType = {
   profilePic?: string;
 };
 
-const Chat = () => {
+export default function Chat() {
   const router = useRouter();
+
   const [loading, setLoading] = useState(true);
   const [astrologers, setAstrologers] = useState<AstrologerType[]>([]);
   const [error, setError] = useState<string | null>(null);
+
+  // 🔥 MODAL STATE (SAME AS HOME)
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedAstro, setSelectedAstro] =
+    useState<AstrologerType | null>(null);
 
   useEffect(() => {
     const fetchAstrologers = async () => {
@@ -38,7 +46,6 @@ const Chat = () => {
         const data = await apiGetApprovedAstrologers();
         setAstrologers(data);
       } catch (err: any) {
-        console.error(err);
         setError(err.message || "Failed to fetch astrologers");
       } finally {
         setLoading(false);
@@ -65,57 +72,90 @@ const Chat = () => {
   }
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={{ paddingBottom: 120 }}
-    >
-      {/* Header */}
-      <View style={styles.header}>
-        <Ionicons
-          name="arrow-back"
-          size={24}
-          color="#e0c878"
-          onPress={() => router.back()}
-        />
-        <Text style={styles.headerTitle}>Chat</Text>
-      </View>
+    <View style={styles.container}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
+        {/* HEADER */}
+        <View style={styles.header}>
+          <Ionicons
+            name="arrow-back"
+            size={24}
+            color="#e0c878"
+            onPress={() => router.back()}
+          />
+          <Text style={styles.headerTitle}>Chat</Text>
+        </View>
 
-      {/* Astrologers List */}
-      <View style={styles.listContainer}>
-        {astrologers.length === 0 ? (
-          <Text style={styles.emptyText}>
-            No approved astrologers available.
-          </Text>
-        ) : (
-          astrologers.map((astro) => (
-            <AstrologerComponent
-              key={astro._id}
-              _id={astro._id}
-              name={astro.name}
-              bio={astro.bio}
-              skills={astro.skills}
-              languages={astro.languages}
-              experience={astro.experience}
-              price={astro.pricePerMinute}
-              oldPrice={astro.oldPrice}
-              orders={astro.orders}
-              status={astro.availability}
-              waitTime={astro.waitTime}
-              profilePic={astro.profilePic}
-              onChatPress={() => router.push(`/dashboard/chatpage?astrologerId=${astro._id}`)}
-            />
-          ))
-        )}
-      </View>
-    </ScrollView>
+        {/* ASTROLOGER LIST */}
+        <View style={styles.listContainer}>
+          {astrologers.length === 0 ? (
+            <Text style={styles.emptyText}>
+              No approved astrologers available.
+            </Text>
+          ) : (
+            astrologers.map((astro) => {
+              console.log("Astrologer:", astro.name, "Status:", astro.availability);
+              return (
+                <AstrologerComponent
+                  key={astro._id}
+                  {...astro}
+                  status={astro.availability} // 🔥 REQUIRED
+                  price={astro.pricePerMinute}
+                  onChatPress={() => {
+                    console.log("CHAT CLICKED:", astro.name);
+                    setSelectedAstro(astro);
+                    setModalVisible(true);
+                  }}
+                />
+              );
+            })
+          )}
+        </View>
+      </ScrollView>
+
+      {/* 🔥 MODAL (IDENTICAL BEHAVIOR AS HOME) */}
+      {modalVisible && selectedAstro && (
+        <BlurView intensity={40} tint="dark" style={styles.blur}>
+          <View style={styles.modal}>
+            <Text style={styles.modalTitle}>{selectedAstro.name}</Text>
+
+            <Text style={styles.modalText}>
+              ₹{selectedAstro.pricePerMinute}/min
+            </Text>
+
+            <View style={styles.modalRow}>
+              <TouchableOpacity
+                style={styles.cancelBtn}
+                onPress={() => setModalVisible(false)}
+              >
+                <Text>Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.proceedBtn}
+                onPress={() => {
+                  setModalVisible(false);
+                  router.push({
+                    pathname: "/dashboard/chatpage",
+                    params: { astrologerId: selectedAstro._id },
+                  });
+                }}
+              >
+                <Text style={{ fontWeight: "bold" }}>Proceed</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </BlurView>
+      )}
+    </View>
   );
-};
+}
 
-export default Chat;
+/* ===================== STYLES ===================== */
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    position: "relative",
     backgroundColor: "#f5f5f5",
   },
 
@@ -147,7 +187,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
     color: "#e0c878",
-    marginRight: 24, // balances back arrow
+    marginRight: 24,
   },
 
   listContainer: {
@@ -160,5 +200,53 @@ const styles = StyleSheet.create({
     marginTop: 24,
     color: "#777",
     fontSize: 16,
+  },
+
+  /* MODAL */
+  blur: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  modal: {
+    backgroundColor: "#fff",
+    width: "85%",
+    padding: 20,
+    borderRadius: 16,
+  },
+
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    textAlign: "center",
+  },
+
+  modalText: {
+    textAlign: "center",
+    marginVertical: 10,
+    fontSize: 16,
+  },
+
+  modalRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 20,
+  },
+
+  cancelBtn: {
+    padding: 10,
+    backgroundColor: "#ccc",
+    borderRadius: 8,
+  },
+
+  proceedBtn: {
+    padding: 10,
+    backgroundColor: "#e0c878",
+    borderRadius: 8,
   },
 });
