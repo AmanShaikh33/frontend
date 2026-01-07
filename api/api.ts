@@ -3,8 +3,9 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 
 
-const API_URL = "https://astro-backend-qdu5.onrender.com/api"; // Replace with your backend URL
+const API_URL = "http://10.97.137.71:5000/api"; // For network development
 // const API_URL = "http://localhost:5000/api"; // For local development
+// const API_URL = "https://astro-backend-qdu5.onrender.com/api"; // Replace with your backend URL
 
 const api = axios.create({
   baseURL: API_URL,
@@ -238,6 +239,32 @@ export const apiAdminDeleteAstrologer = async (token: string, id: string) => {
   }
 };
 
+/* ------------------- USER APIs ------------------- */
+
+// Get user by ID
+export const apiGetUserById = async (token: string, userId: string) => {
+  try {
+    const res = await api.get(`/auth/user/${userId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return res.data;
+  } catch (error: any) {
+    throw error.response?.data || { message: "Get user failed" };
+  }
+};
+
+// Get astrologer by ID
+export const apiGetAstrologerById = async (token: string, astrologerId: string) => {
+  try {
+    const res = await api.get(`/astrologers/${astrologerId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return res.data;
+  } catch (error: any) {
+    throw error.response?.data || { message: "Get astrologer failed" };
+  }
+};
+
 /* ------------------- CHAT APIs ------------------- */
 
 
@@ -245,7 +272,9 @@ export const apiAdminDeleteAstrologer = async (token: string, id: string) => {
 export const apiCreateOrGetChatRoom = async (token, astrologerId = null, userId = null) => {
   const body = astrologerId ? { astrologerId } : { userId };
 
-  const response = await fetch("https://astro-backend-qdu5.onrender.com/api/chat/create-room", {
+  const response = await fetch("http://10.97.137.71:5000/api/chat/create-room", {
+  // const response = await fetch("http://localhost:5000/api/chat/create-room", {
+  // const response = await fetch("https://astro-backend-qdu5.onrender.com/api/chat/create-room", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

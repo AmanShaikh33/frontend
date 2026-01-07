@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useLocalSearchParams } from "expo-router";
-import jwtDecode from "jwt-decode";
+import { jwtDecode } from "jwt-decode";
 import React, { useEffect, useState } from "react";
 import {
   View,
@@ -13,7 +13,12 @@ import {
   StyleSheet,
 } from "react-native";
 import { socket } from "../../lib/socket";
-import { apiCreateOrGetChatRoom, apiGetMessages } from "../../api/api";
+import {
+  apiCreateOrGetChatRoom,
+  apiGetMessages,
+  apiGetApprovedAstrologers,
+  apiGetWalletBalance,
+} from "../../api/api";
 
 interface Message {
   _id?: string;
@@ -30,24 +35,60 @@ export default function UserChatPage() {
   const [newMessage, setNewMessage] = useState("");
   const [userId, setUserId] = useState("");
   const [astroJoined, setAstroJoined] = useState(false);
+  const [astrologerInfo, setAstrologerInfo] = useState<any>(null);
+  const [userCoins, setUserCoins] = useState(0);
+  const [billingActive, setBillingActive] = useState(false);
+  const [chatEnded, setChatEnded] = useState(false);
+  const [elapsedTime, setElapsedTime] = useState(0);
 
   useEffect(() => {
+    let mounted = true;
+
     const init = async () => {
       const token = await AsyncStorage.getItem("token");
       const userStr = await AsyncStorage.getItem("userData");
-      if (!token || !userStr || !astrologerId) return;
+      if (!token || !userStr || !astrologerId || !mounted) return;
 
       const decoded: any = jwtDecode(token);
       setUserId(decoded.id);
+
       const parsedUser = JSON.parse(userStr);
 
+      // 1️⃣ Wallet balance
+      try {
+        const wallet = await apiGetWalletBalance(parsedUser._id);
+        if (wallet?.success) setUserCoins(wallet.balance);
+      } catch {}
+
+      // 2️⃣ Create / get room
       const room = await apiCreateOrGetChatRoom(token, astrologerId);
       const roomId = room._id;
       setChatRoomId(roomId);
 
-      // Setup socket listeners first
+      // 3️⃣ Astrologer info
+      const astrologers = await apiGetApprovedAstrologers();
+      const astro = astrologers.find((a: any) => a._id === astrologerId);
+      setAstrologerInfo(
+        astro || { name: "Astrologer", pricePerMinute: 0 }
+      );
+
+      // 4️⃣ Join room & announce user (NO socket.connect)
+      socket.emit("joinRoom", { roomId });
+      socket.emit("userRequestsChat", {
+        astrologerId,
+        userId: decoded.id,
+        roomId,
+        userName: parsedUser.name,
+      });
+      socket.emit("participant-joined", {
+        roomId,
+        role: "user",
+        userId: decoded.id,
+        pricePerMinute: astro?.pricePerMinute || 0,
+      });
+
+      // 5️⃣ Listeners
       socket.on("participant-joined", ({ role }) => {
-        console.log("👥 Participant joined:", role);
         if (role === "astrologer") setAstroJoined(true);
       });
 
@@ -55,52 +96,33 @@ export default function UserChatPage() {
         setMessages((prev) => [...prev, msg]);
       });
 
-      // Connect and wait for connection
-      if (!socket.connected) {
-        socket.connect();
-      }
-
-      // Wait for connection then emit events
-      socket.on("connect", () => {
-        console.log("🔌 User socket connected");
-        
-        socket.emit("joinRoom", { roomId });
-        console.log("👥 User joined room:", roomId);
-
-        socket.emit("userRequestsChat", {
-          astrologerId,
-          userId: decoded.id,
-          roomId,
-          userName: parsedUser.name,
-        });
-        console.log("🔥 USER CHAT REQUEST SENT:", { astrologerId, userId: decoded.id });
-
-        socket.emit("participant-joined", {
-          roomId,
-          role: "user",
-          userId: decoded.id,
-        });
-        console.log("✅ User participant-joined emitted");
+      socket.on("startBilling", () => {
+        setBillingActive(true);
+        setAstroJoined(true);
       });
 
-      // If already connected, emit immediately
-      if (socket.connected) {
-        console.log("🔌 User socket already connected, emitting events");
-        socket.emit("joinRoom", { roomId });
-        socket.emit("userRequestsChat", {
-          astrologerId,
-          userId: decoded.id,
-          roomId,
-          userName: parsedUser.name,
-        });
-        socket.emit("participant-joined", {
-          roomId,
-          role: "user",
-          userId: decoded.id,
-        });
-        console.log("🔥 USER CHAT REQUEST SENT (already connected):", { astrologerId, userId: decoded.id });
-      }
+      socket.on("coinsUpdated", (data) => {
+        if (data?.userCoins !== undefined) setUserCoins(data.userCoins);
+      });
 
+      socket.on("timerUpdate", setElapsedTime);
+
+      socket.on("endChatDueToLowBalance", () => {
+        setBillingActive(false);
+        setChatEnded(true);
+        Alert.alert("Chat Ended", "Insufficient coins.");
+      });
+
+      socket.on("participantLeft", ({ role }) => {
+        if (role === "astrologer") {
+          setAstroJoined(false);
+          setBillingActive(false);
+          setChatEnded(true);
+          Alert.alert("Chat Ended", "Astrologer left the chat.");
+        }
+      });
+
+      // 6️⃣ Messages
       const msgs = await apiGetMessages(token, roomId);
       setMessages(msgs);
     };
@@ -108,18 +130,25 @@ export default function UserChatPage() {
     init();
 
     return () => {
+      mounted = false;
+
+      if (chatRoomId) {
+        socket.emit("leaveRoom", { roomId: chatRoomId, role: "user" });
+      }
+
       socket.off("participant-joined");
       socket.off("receiveMessage");
-      socket.off("connect");
+      socket.off("startBilling");
+      socket.off("coinsUpdated");
+      socket.off("timerUpdate");
+      socket.off("endChatDueToLowBalance");
+      socket.off("participantLeft");
     };
   }, [astrologerId]);
 
   const sendMessage = () => {
-    if (!astroJoined) {
-      Alert.alert("Waiting", "Astrologer has not joined yet.");
-      return;
-    }
-
+    if (chatEnded) return Alert.alert("Chat ended");
+    if (!astroJoined) return Alert.alert("Waiting for astrologer");
     if (!newMessage.trim()) return;
 
     socket.emit("sendMessage", {
@@ -134,9 +163,26 @@ export default function UserChatPage() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.header}>
-        {astroJoined ? "Astrologer Connected" : "Waiting for astrologer..."}
-      </Text>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>
+          {astrologerInfo ? `Chat with ${astrologerInfo.name}` : "Loading..."}
+        </Text>
+        <Text style={styles.headerStatus}>
+          {chatEnded
+            ? "🔴 Chat Ended"
+            : astroJoined
+            ? "🟢 Connected"
+            : "⏳ Waiting..."}
+        </Text>
+
+        {billingActive && (
+          <Text style={styles.billing}>
+            💰 Coins: {userCoins} | ⏱️{" "}
+            {Math.floor(elapsedTime / 60)}:
+            {(elapsedTime % 60).toString().padStart(2, "0")}
+          </Text>
+        )}
+      </View>
 
       <FlatList
         data={messages}
@@ -158,9 +204,9 @@ export default function UserChatPage() {
           style={styles.input}
           value={newMessage}
           onChangeText={setNewMessage}
-          editable={astroJoined}
+          editable={!chatEnded && astroJoined}
         />
-        <TouchableOpacity onPress={sendMessage} disabled={!astroJoined}>
+        <TouchableOpacity onPress={sendMessage}>
           <Text style={styles.send}>Send</Text>
         </TouchableOpacity>
       </View>
@@ -170,7 +216,10 @@ export default function UserChatPage() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { padding: 10, fontWeight: "bold" },
+  header: { padding: 15, borderBottomWidth: 1, borderBottomColor: "#ddd" },
+  headerTitle: { fontSize: 18, fontWeight: "bold" },
+  headerStatus: { fontSize: 14, color: "#666" },
+  billing: { fontSize: 12, color: "#e74c3c", marginTop: 4 },
   msg: { padding: 10, margin: 5, borderRadius: 10 },
   mine: { backgroundColor: "#DCF8C6", alignSelf: "flex-end" },
   theirs: { backgroundColor: "#EEE", alignSelf: "flex-start" },

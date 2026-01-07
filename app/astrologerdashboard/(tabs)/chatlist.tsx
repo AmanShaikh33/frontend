@@ -1,6 +1,6 @@
 // app/astrologerdashboard/chatlist.tsx
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   View,
   Text,
@@ -32,6 +32,7 @@ export default function AstrologerChatList() {
   const [incomingRequest, setIncomingRequest] = useState<any>(null);
   const [highlightUser, setHighlightUser] = useState<string | null>(null);
 
+  const hasRegisteredOnline = useRef(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -39,29 +40,17 @@ export default function AstrologerChatList() {
       const token = await AsyncStorage.getItem("token");
       if (!token) return;
 
-      // 1️⃣ Fetch astrologer profile ONCE
+      // 1️⃣ Fetch astrologer profile
       const profile = await apiGetMyProfile(token);
       const astrologerId = profile._id;
 
-      // 2️⃣ Connect socket if needed
-      if (!socket.connected) {
-        socket.connect();
+      // 2️⃣ Register astrologer ONLINE (ONLY ONCE PER SOCKET)
+      if (!hasRegisteredOnline.current) {
+        socket.emit("astrologerOnline", { astrologerId });
+        hasRegisteredOnline.current = true;
       }
 
-      // 3️⃣ Wait for connection then register astrologer
-      socket.on("connect", () => {
-        console.log("🔌 Astrologer socket connected");
-        socket.emit("astrologerOnline", { astrologerId });
-        console.log("🟮 ASTROLOGER ONLINE EMITTED:", astrologerId);
-      });
-
-      // If already connected, emit immediately
-      if (socket.connected) {
-        socket.emit("astrologerOnline", { astrologerId });
-        console.log("🟮 ASTROLOGER ONLINE EMITTED (already connected):", astrologerId);
-      }
-
-      // 4️⃣ Listen for chat requests
+      // 3️⃣ Listen for incoming chat requests
       socket.on("incomingChatRequest", (data) => {
         console.log("🔥 CHAT REQUEST RECEIVED:", data);
         setIncomingRequest(data);
@@ -78,7 +67,6 @@ export default function AstrologerChatList() {
 
     return () => {
       socket.off("incomingChatRequest");
-      socket.off("connect");
     };
   }, []);
 

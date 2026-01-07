@@ -41,7 +41,7 @@ export default function AddMoneyScreen() {
       const order = await apiCreateOrder(amount);
 
       const options = {
-        key: process.env.EXPO_PUBLIC_RAZORPAY_KEY_ID,
+        key: process.env.EXPO_PUBLIC_RAZORPAY_KEY_ID || "rzp_test_your_key_here",
         amount: order.amount,
         currency: "INR",
         name: "AstroTalk Wallet",
@@ -54,27 +54,45 @@ export default function AddMoneyScreen() {
         theme: { color: "#2d1e3f" },
       };
 
-      const paymentResponse = await RazorpayCheckout.open(options);
+      console.log("Razorpay options:", options);
 
-      const verifyRes = await apiVerifyPayment({
-        razorpay_order_id: paymentResponse.razorpay_order_id,
-        razorpay_payment_id: paymentResponse.razorpay_payment_id,
-        razorpay_signature: paymentResponse.razorpay_signature,
-        userId: user._id,
-        amount,
-      });
-
-      if (!verifyRes.success) {
-        Alert.alert("Payment Failed", "Verification failed");
+      if (!RazorpayCheckout) {
+        Alert.alert("Error", "Payment gateway not available");
         return;
       }
 
-      Alert.alert("Success", "Coins added successfully!");
+      RazorpayCheckout.open(options)
+        .then(async (data) => {
+          console.log("Payment success:", data);
+          
+          const verifyRes = await apiVerifyPayment({
+            razorpay_order_id: data.razorpay_order_id,
+            razorpay_payment_id: data.razorpay_payment_id,
+            razorpay_signature: data.razorpay_signature,
+            userId: user._id,
+            amount,
+          });
 
-      const updatedUser = { ...user, coins: verifyRes.coins };
-      await AsyncStorage.setItem("userData", JSON.stringify(updatedUser));
+          if (!verifyRes.success) {
+            Alert.alert("Payment Failed", "Verification failed");
+            return;
+          }
 
-      router.replace("/dashboard/(tabs)/home");
+          Alert.alert("Success", "Coins added successfully!");
+
+          const updatedUser = { ...user, coins: verifyRes.coins };
+          await AsyncStorage.setItem("userData", JSON.stringify(updatedUser));
+
+          router.replace("/dashboard/(tabs)/home");
+        })
+        .catch((error) => {
+          console.log("Payment cancelled or failed:", error);
+          if (error.code === 0) {
+            Alert.alert("Payment Cancelled", "Payment was cancelled by user");
+          } else {
+            Alert.alert("Payment Failed", error.description || "Something went wrong");
+          }
+        });
     } catch (error: any) {
       console.log("Payment Error:", error);
       Alert.alert("Payment Failed", error?.message || "Something went wrong");

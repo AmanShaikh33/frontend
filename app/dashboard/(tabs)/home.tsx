@@ -163,6 +163,7 @@ export default function HomeScreen() {
                 status={astro.availability}
                 price={astro.pricePerMinute}
                 onChatPress={() => {
+                  console.log("💆 Chat button clicked for astrologer:", astro._id);
                   setSelectedAstro(astro);
                   setModalVisible(true);
                 }}
@@ -191,6 +192,7 @@ export default function HomeScreen() {
               <TouchableOpacity
                 style={styles.proceedBtn}
                 onPress={() => {
+                  console.log("🚀 Proceed clicked, navigating to chat with:", selectedAstro._id);
                   setModalVisible(false);
                   router.push({
                     pathname: "/dashboard/chatpage",
