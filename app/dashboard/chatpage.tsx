@@ -1,23 +1,23 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useLocalSearchParams } from "expo-router";
-import { jwtDecode } from "jwt-decode";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
   FlatList,
-  SafeAreaView,
   Alert,
   StyleSheet,
+  BackHandler,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useLocalSearchParams } from "expo-router";
+import { jwtDecode } from "jwt-decode";
 import { socket } from "../../lib/socket";
 import {
-  apiCreateOrGetChatRoom,
+  apiGetAstrologerById,
+  apiGetMe,
   apiGetMessages,
-  apiGetApprovedAstrologers,
-  apiGetWalletBalance,
+  apiEndChat,
 } from "../../api/api";
 
 interface Message {
@@ -31,128 +31,195 @@ export default function UserChatPage() {
   const { astrologerId } = useLocalSearchParams<{ astrologerId: string }>();
 
   const [messages, setMessages] = useState<Message[]>([]);
-  const [chatRoomId, setChatRoomId] = useState("");
   const [newMessage, setNewMessage] = useState("");
   const [userId, setUserId] = useState("");
-  const [astroJoined, setAstroJoined] = useState(false);
   const [astrologerInfo, setAstrologerInfo] = useState<any>(null);
-  const [userCoins, setUserCoins] = useState(0);
-  const [billingActive, setBillingActive] = useState(false);
+
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [waitingForAcceptance, setWaitingForAcceptance] = useState(true);
   const [chatEnded, setChatEnded] = useState(false);
+
+  const [userCoins, setUserCoins] = useState(0);
+  const [sessionCost, setSessionCost] = useState(0);
   const [elapsedTime, setElapsedTime] = useState(0);
 
+  const hasEmittedRequest = useRef(false);
+
+  /* ===============================
+     🔌 SOCKET + INIT (SAFE)
+  =============================== */
   useEffect(() => {
     let mounted = true;
 
     const init = async () => {
-      const token = await AsyncStorage.getItem("token");
-      const userStr = await AsyncStorage.getItem("userData");
-      if (!token || !userStr || !astrologerId || !mounted) return;
-
-      const decoded: any = jwtDecode(token);
-      setUserId(decoded.id);
-
-      const parsedUser = JSON.parse(userStr);
-
-      // 1️⃣ Wallet balance
       try {
-        const wallet = await apiGetWalletBalance(parsedUser._id);
-        if (wallet?.success) setUserCoins(wallet.balance);
-      } catch {}
+        const token = await AsyncStorage.getItem("token");
+        if (!token || !astrologerId || !mounted) return;
 
-      // 2️⃣ Create / get room
-      const room = await apiCreateOrGetChatRoom(token, astrologerId);
-      const roomId = room._id;
-      setChatRoomId(roomId);
+        const decoded: any = jwtDecode(token);
+        setUserId(decoded.id);
 
-      // 3️⃣ Astrologer info
-      const astrologers = await apiGetApprovedAstrologers();
-      const astro = astrologers.find((a: any) => a._id === astrologerId);
-      setAstrologerInfo(
-        astro || { name: "Astrologer", pricePerMinute: 0 }
-      );
+        console.log("📱 User chat page loaded for astrologer:", astrologerId);
+        console.log("👤 User ID:", decoded.id, "Name:", decoded.name);
+        console.log("🔌 Socket connected:", socket.connected);
 
-      // 4️⃣ Join room & announce user (NO socket.connect)
-      socket.emit("joinRoom", { roomId });
-      socket.emit("userRequestsChat", {
-        astrologerId,
-        userId: decoded.id,
-        roomId,
-        userName: parsedUser.name,
-      });
-      socket.emit("participant-joined", {
-        roomId,
-        role: "user",
-        userId: decoded.id,
-        pricePerMinute: astro?.pricePerMinute || 0,
-      });
-
-      // 5️⃣ Listeners
-      socket.on("participant-joined", ({ role }) => {
-        if (role === "astrologer") setAstroJoined(true);
-      });
-
-      socket.on("receiveMessage", (msg: Message) => {
-        setMessages((prev) => [...prev, msg]);
-      });
-
-      socket.on("startBilling", () => {
-        setBillingActive(true);
-        setAstroJoined(true);
-      });
-
-      socket.on("coinsUpdated", (data) => {
-        if (data?.userCoins !== undefined) setUserCoins(data.userCoins);
-      });
-
-      socket.on("timerUpdate", setElapsedTime);
-
-      socket.on("endChatDueToLowBalance", () => {
-        setBillingActive(false);
-        setChatEnded(true);
-        Alert.alert("Chat Ended", "Insufficient coins.");
-      });
-
-      socket.on("participantLeft", ({ role }) => {
-        if (role === "astrologer") {
-          setAstroJoined(false);
-          setBillingActive(false);
-          setChatEnded(true);
-          Alert.alert("Chat Ended", "Astrologer left the chat.");
+        if (!socket.connected) {
+          console.log("🔌 Socket not connected, connecting now...");
+          socket.connect();
+          await new Promise((resolve) => {
+            if (socket.connected) {
+              resolve(true);
+            } else {
+              socket.once("connect", () => resolve(true));
+            }
+          });
+          console.log("✅ Socket connected successfully");
+        } else {
+          console.log("✅ Socket already connected");
         }
-      });
 
-      // 6️⃣ Messages
-      const msgs = await apiGetMessages(token, roomId);
-      setMessages(msgs);
+        // Register user online
+        socket.emit("userOnline", { userId: decoded.id });
+        console.log("🟢 User registered online:", decoded.id);
+
+        // Load astrologer info
+        console.log("🔍 Loading astrologer info...");
+        const astro = await apiGetAstrologerById(token, astrologerId);
+        setAstrologerInfo(astro);
+        console.log("✅ Astrologer info loaded:", astro.name);
+
+        // Load user coins
+        console.log("🔍 Loading user profile...");
+        const profile = await apiGetMe(token);
+        setUserCoins(profile.coins || 0);
+        console.log("✅ User profile loaded, coins:", profile.coins);
+
+        /* 🔥 REMOVE OLD LISTENERS FIRST */
+        socket.off("chat-accepted");
+        socket.off("chatAccepted");
+        socket.off("minute-billed");
+        socket.off("timer-tick");
+        socket.off("force-end-chat");
+        socket.off("chatEnded");
+        socket.off("receiveMessage");
+        socket.off("insufficient-coins");
+
+        /* ❌ INSUFFICIENT COINS */
+        socket.on("insufficient-coins", ({ message, required, current }) => {
+          console.log("❌ Insufficient coins:", message);
+          setWaitingForAcceptance(false);
+          Alert.alert(
+            "Insufficient Coins",
+            `You need ${required} coins to chat. You have ${current} coins. Please add coins to your wallet.`,
+            [{ text: "OK" }]
+          );
+        });
+
+        /* ✅ CHAT ACCEPTED */
+        socket.on("chat-accepted", async ({ sessionId }) => {
+          console.log("✅ chat-accepted received! SessionId:", sessionId);
+          setSessionId(sessionId);
+          setWaitingForAcceptance(false);
+          socket.emit("joinSession", { sessionId });
+          const msgs = await apiGetMessages(token, sessionId);
+          setMessages(msgs);
+        });
+
+        socket.on("chatAccepted", async (data) => {
+          console.log("✅ chatAccepted received! Data:", data);
+          const sid = data.sessionId || data.session || data;
+          setSessionId(sid);
+          setWaitingForAcceptance(false);
+          socket.emit("joinSession", { sessionId: sid });
+          const msgs = await apiGetMessages(token, sid);
+          setMessages(msgs);
+        });
+
+        /* 💰 BILLING */
+        socket.on("minute-billed", ({ minutes, coinsLeft }) => {
+          console.log("💰 Minute billed - Minutes:", minutes, "Coins left:", coinsLeft);
+          setUserCoins(coinsLeft);
+          setSessionCost(minutes * (astro.pricePerMinute || 0));
+        });
+
+        /* ⏱️ TIMER */
+        socket.on("timer-tick", ({ elapsedSeconds }) => {
+          setElapsedTime(elapsedSeconds);
+        });
+
+        /* 🔚 FORCE END CHAT */
+        socket.on("force-end-chat", ({ reason }) => {
+          console.log("🔚 Force end chat:", reason);
+          setChatEnded(true);
+          Alert.alert("Chat Ended", reason === "INSUFFICIENT_COINS" ? "Insufficient coins to continue" : "Chat ended");
+        });
+
+        /* 🔚 CHAT ENDED */
+        socket.on("chatEnded", ({ totalCoins }) => {
+          console.log("🔚 Chat ended - Total coins:", totalCoins);
+          setChatEnded(true);
+          Alert.alert("Chat Ended", `Total cost: ${totalCoins} coins`);
+        });
+
+        /* 📩 RECEIVE MESSAGE */
+        socket.on("receiveMessage", (msg: Message) => {
+          setMessages((prev) => [...prev, msg]);
+        });
+
+        /* 📤 EMIT CHAT REQUEST (ONCE) */
+        if (!hasEmittedRequest.current) {
+          console.log("📤 About to emit userRequestsChat...");
+          console.log("📤 Data:", { astrologerId, userId: decoded.id, userName: decoded.name || "User" });
+
+          socket.emit("userRequestsChat", {
+            astrologerId,
+            userId: decoded.id,
+            userName: decoded.name || "User",
+          });
+
+          hasEmittedRequest.current = true;
+          console.log("✅ Chat request emitted successfully");
+        }
+      } catch (error) {
+        console.error("❌ Error in init:", error);
+      }
     };
 
     init();
 
+    const backHandler = BackHandler.addEventListener(
+      "hardwareBackPress",
+      () => {
+        if (sessionId && !chatEnded) {
+          endChat();
+        }
+        return false;
+      }
+    );
+
     return () => {
       mounted = false;
+      backHandler.remove();
 
-      if (chatRoomId) {
-        socket.emit("leaveRoom", { roomId: chatRoomId, role: "user" });
-      }
-
-      socket.off("participant-joined");
+      socket.off("chat-accepted");
+      socket.off("chatAccepted");
+      socket.off("minute-billed");
+      socket.off("timer-tick");
+      socket.off("force-end-chat");
+      socket.off("chatEnded");
       socket.off("receiveMessage");
-      socket.off("startBilling");
-      socket.off("coinsUpdated");
-      socket.off("timerUpdate");
-      socket.off("endChatDueToLowBalance");
-      socket.off("participantLeft");
+      socket.off("insufficient-coins");
     };
   }, [astrologerId]);
 
+  /* ===============================
+     ✉️ SEND MESSAGE
+  =============================== */
   const sendMessage = () => {
-    if (chatEnded) return Alert.alert("Chat ended");
-    if (!astroJoined) return Alert.alert("Waiting for astrologer");
-    if (!newMessage.trim()) return;
+    if (!sessionId || chatEnded || !newMessage.trim()) return;
 
     socket.emit("sendMessage", {
-      chatRoomId,
+      sessionId,
       senderId: userId,
       receiverId: astrologerId,
       content: newMessage,
@@ -161,28 +228,47 @@ export default function UserChatPage() {
     setNewMessage("");
   };
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>
-          {astrologerInfo ? `Chat with ${astrologerInfo.name}` : "Loading..."}
-        </Text>
-        <Text style={styles.headerStatus}>
-          {chatEnded
-            ? "🔴 Chat Ended"
-            : astroJoined
-            ? "🟢 Connected"
-            : "⏳ Waiting..."}
-        </Text>
+  /* ===============================
+     🔚 END CHAT
+  =============================== */
+  const endChat = async () => {
+    if (!sessionId || chatEnded) return;
 
-        {billingActive && (
-          <Text style={styles.billing}>
-            💰 Coins: {userCoins} | ⏱️{" "}
-            {Math.floor(elapsedTime / 60)}:
-            {(elapsedTime % 60).toString().padStart(2, "0")}
+    socket.emit("endChat", {
+      roomId: sessionId,
+      endedBy: "user",
+    });
+
+    setChatEnded(true);
+  };
+
+  /* ===============================
+     🖼️ UI
+  =============================== */
+  return (
+    <View style={styles.container}>
+      <Text style={styles.header}>
+        {astrologerInfo ? `Chat with ${astrologerInfo.name}` : "Loading..."}
+      </Text>
+
+      {waitingForAcceptance && (
+        <View style={styles.waitingContainer}>
+          <Text style={styles.waitingText}>
+            ⏳ Waiting for astrologer to accept...
           </Text>
-        )}
-      </View>
+        </View>
+      )}
+
+      {sessionId && !chatEnded && (
+        <View style={styles.billingContainer}>
+          <Text style={styles.billing}>
+            💰 Coins: {userCoins} | Cost: {sessionCost} | ⏱️ {Math.floor(elapsedTime / 60)}:{(elapsedTime % 60).toString().padStart(2, '0')}
+          </Text>
+          <TouchableOpacity onPress={endChat} style={styles.endButton}>
+            <Text style={styles.endButtonText}>End Chat</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       <FlatList
         data={messages}
@@ -204,26 +290,45 @@ export default function UserChatPage() {
           style={styles.input}
           value={newMessage}
           onChangeText={setNewMessage}
-          editable={!chatEnded && astroJoined}
+          editable={!!sessionId && !chatEnded}
+          placeholder={
+            sessionId ? "Type a message..." : "Waiting for acceptance..."
+          }
         />
         <TouchableOpacity onPress={sendMessage}>
           <Text style={styles.send}>Send</Text>
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
+/* ===============================
+   🎨 STYLES
+=============================== */
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  header: { padding: 15, borderBottomWidth: 1, borderBottomColor: "#ddd" },
-  headerTitle: { fontSize: 18, fontWeight: "bold" },
-  headerStatus: { fontSize: 14, color: "#666" },
-  billing: { fontSize: 12, color: "#e74c3c", marginTop: 4 },
+  container: { flex: 1, paddingTop: 40, paddingBottom: 80 },
+  header: { fontSize: 18, fontWeight: "bold", padding: 10 },
+  waitingContainer: { padding: 20, alignItems: "center" },
+  waitingText: { fontSize: 16, color: "#f39c12", fontStyle: "italic" },
+  billingContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingHorizontal: 10,
+    marginBottom: 5,
+  },
+  billing: { fontSize: 12, color: "#27ae60" },
+  endButton: {
+    backgroundColor: "#e74c3c",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 15,
+  },
+  endButtonText: { color: "white", fontSize: 12, fontWeight: "bold" },
   msg: { padding: 10, margin: 5, borderRadius: 10 },
   mine: { backgroundColor: "#DCF8C6", alignSelf: "flex-end" },
   theirs: { backgroundColor: "#EEE", alignSelf: "flex-start" },
-  inputBar: { flexDirection: "row", padding: 10 },
+  inputBar: { flexDirection: "row", padding: 10, position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: 'white' },
   input: { flex: 1, borderWidth: 1, borderRadius: 20, paddingHorizontal: 10 },
   send: { marginLeft: 10, color: "blue", fontWeight: "bold" },
 });

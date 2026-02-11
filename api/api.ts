@@ -3,9 +3,9 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 
 
-const API_URL = "https://astro-backend-qdu5.onrender.com/api"; // Render deployment
-// const API_URL = "http://10.97.137.71:5000/api"; // For network development
+const API_URL = "http://10.88.89.72:5000/api"; // For network development
 // const API_URL = "http://localhost:5000/api"; // For local development
+// const API_URL = "https://astro-backend-qdu5.onrender.com/api"; // Render deployment
 
 const api = axios.create({
   baseURL: API_URL,
@@ -24,6 +24,17 @@ api.interceptors.request.use(async (config) => {
   }
   return config;
 });
+
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    if (error.response?.status === 401 || error.message === "Not authorized, token failed") {
+      await AsyncStorage.removeItem("token");
+      // Token is invalid, user will be redirected to login by app logic
+    }
+    return Promise.reject(error);
+  }
+);
 
 
 export const setAuthToken = (token?: string) => {
@@ -272,9 +283,9 @@ export const apiGetAstrologerById = async (token: string, astrologerId: string) 
 export const apiCreateOrGetChatRoom = async (token, astrologerId = null, userId = null) => {
   const body = astrologerId ? { astrologerId } : { userId };
 
-  const response = await fetch("https://astro-backend-qdu5.onrender.com/api/chat/create-room", {
-  // const response = await fetch("http://10.97.137.71:5000/api/chat/create-room", {
+  const response = await fetch("http://10.88.89.72:5000/api/chat/create-room", {
   // const response = await fetch("http://localhost:5000/api/chat/create-room", {
+  // const response = await fetch("https://astro-backend-qdu5.onrender.com/api/chat/create-room", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -354,6 +365,69 @@ export const apiGetWalletBalance = async (userId: string) => {
   }
 };
 
+// Get Astrologer Earnings
+export const apiGetAstrologerEarnings = async (token: string) => {
+  try {
+    const res = await api.get("/astrologers/earnings", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return res.data;
+  } catch (error: any) {
+    throw error.response?.data || { message: "Failed to fetch earnings" };
+  }
+};
+
+
+export const apiAcceptChat = async (
+  token: string,
+  requestId: string
+) => {
+  const res = await api.post(
+    "/chat/accept",
+    { requestId },
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+
+  return res.data; 
+  // { message, sessionId }
+};
+export const apiEndChat = async (
+  token: string,
+  sessionId: string
+) => {
+  const res = await api.post(
+    "/chat/end",
+    { sessionId },
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+
+  return res.data;
+};
+
+export const apiAcceptChatRequest = async (token, requestId) => {
+  const res = await fetch(
+    "http://10.88.89.72:5000/api/chat/accept",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ requestId }),
+    }
+  );
+
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.message);
+  }
+
+  return res.json();
+};
 
 
 
