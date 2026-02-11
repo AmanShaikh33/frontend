@@ -40,19 +40,31 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: "profile",
+          title: "Profile",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="chatbubbles" size={size} color={color} />
+            <Ionicons name="person" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="history"
+        options={{
+          title: "History",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="time" size={size} color={color} />
           ),
         }}
       />
       <Tabs.Screen
         name="astroform"
         options={{
-          title: "astroform",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="chatbubbles" size={size} color={color} />
-          ),
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="chatpage"
+        options={{
+          href: null,
         }}
       />
     </Tabs>

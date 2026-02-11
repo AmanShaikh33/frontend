@@ -11,7 +11,7 @@ import {
   StyleSheet,
   BackHandler,
 } from "react-native";
-import { useLocalSearchParams, router } from "expo-router";
+import { useLocalSearchParams, router, useNavigation } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { jwtDecode } from "jwt-decode";
 import { socket } from "../../../lib/socket";
@@ -31,6 +31,7 @@ interface Message {
 
 export default function AstrologerChatPage() {
   const { userId, requestId } = useLocalSearchParams<{ userId: string; requestId?: string }>();
+  const navigation = useNavigation();
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [chatRoomId, setChatRoomId] = useState("");
@@ -46,6 +47,18 @@ export default function AstrologerChatPage() {
   const [chatRequestPending, setChatRequestPending] = useState(false);
   const [chatAccepted, setChatAccepted] = useState(false);
   const [alertShown, setAlertShown] = useState(false);
+
+  useEffect(() => {
+    navigation.setOptions({
+      tabBarStyle: { display: 'none' },
+    });
+
+    return () => {
+      navigation.setOptions({
+        tabBarStyle: undefined,
+      });
+    };
+  }, [navigation]);
 
   useEffect(() => {
     let mounted = true;
@@ -87,7 +100,8 @@ export default function AstrologerChatPage() {
 
       // Load astrologer profile
       const astroProfile = await apiGetMyProfile(token);
-      console.log("👨‍⚕️ Astrologer profile loaded:", astroProfile);
+      const rate = astroProfile.pricePerMinute || 90;
+      console.log("👨⚕️ Astrologer profile loaded:", astroProfile, "Rate:", rate);
 
       // Join the session
       socket.emit("joinSession", { sessionId: roomId });
@@ -115,12 +129,11 @@ export default function AstrologerChatPage() {
       });
 
       socket.on("minute-billed", ({ minutes, coinsLeft, astrologerEarnings }) => {
-        console.log("💰 [ASTROLOGER] Minute billed - Minutes:", minutes, "User coins:", coinsLeft, "My earnings:", astrologerEarnings);
+        console.log("💰 [ASTROLOGER] Minute billed - Minutes:", minutes, "User coins:", coinsLeft, "Rate:", rate);
         setUserCoins(coinsLeft);
-        if (astrologerEarnings !== undefined) {
-          setSessionEarnings(astrologerEarnings);
-          console.log("💰 Updated sessionEarnings to:", astrologerEarnings);
-        }
+        const earnings = minutes * rate;
+        console.log("💰 Calculated earnings:", earnings, "=", minutes, "×", rate);
+        setSessionEarnings(earnings);
         setBillingActive(true);
       });
 
@@ -265,7 +278,7 @@ export default function AstrologerChatPage() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, paddingTop: 40, paddingBottom: 140 },
+  container: { flex: 1, paddingTop: 40, paddingBottom: 20 },
   header: { fontSize: 18, fontWeight: "bold", padding: 10 },
 
   billingContainer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 10, marginBottom: 5 },
@@ -275,7 +288,7 @@ const styles = StyleSheet.create({
   msg: { padding: 10, margin: 5, borderRadius: 10 },
   mine: { backgroundColor: "#DCF8C6", alignSelf: "flex-end" },
   theirs: { backgroundColor: "#EEE", alignSelf: "flex-start" },
-  inputBar: { flexDirection: "row", padding: 10, position: 'absolute', bottom: 60, left: 0, right: 0, backgroundColor: 'white', borderTopWidth: 1, borderTopColor: '#ddd' },
+  inputBar: { flexDirection: "row", padding: 10, position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: 'white', borderTopWidth: 1, borderTopColor: '#ddd' },
   input: { flex: 1, borderWidth: 1, borderRadius: 20, paddingHorizontal: 10 },
   send: { marginLeft: 10, color: "blue", fontWeight: "bold" },
 });
