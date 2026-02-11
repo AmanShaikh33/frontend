@@ -410,7 +410,7 @@ export const apiEndChat = async (
 
 export const apiAcceptChatRequest = async (token, requestId) => {
   const res = await fetch(
-    "http://10.88.89.72:5000/api/chat/accept",
+    "https://astro-backend-qdu5.onrender.com/api/chat/accept",
     {
       method: "POST",
       headers: {
