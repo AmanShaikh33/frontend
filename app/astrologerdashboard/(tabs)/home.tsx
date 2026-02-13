@@ -58,9 +58,9 @@ const UserHome = () => {
         socket.emit("astrologerOnline", { astrologerId: decoded.id });
         
         // Listen for incoming chat requests
-        socket.on("incomingChatRequest", ({ userId, userName, roomId }) => {
-          console.log("🔔 Received chat request from:", userName);
-          setChatRequest({ userId, userName, roomId });
+        socket.on("incomingChatRequest", ({ userId, userName, roomId, requestId }) => {
+          console.log("🔔 Received chat request from:", userName, "requestId:", requestId);
+          setChatRequest({ userId, userName, roomId, requestId });
           setShowModal(true);
           
           // Add alert sound/vibration
@@ -71,10 +71,16 @@ const UserHome = () => {
               { text: "Reject", onPress: () => setShowModal(false), style: "cancel" },
               { text: "Accept", onPress: () => {
                 setShowModal(false);
-                router.push(`/astrologerdashboard/chatpage?userId=${userId}`);
+                router.push(`/astrologerdashboard/chatpage?userId=${userId}&requestId=${requestId}`);
               }}
             ]
           );
+        });
+
+        // Listen for minute-billed event to update earnings in real-time
+        socket.on("minute-billed", ({ astrologerEarnings }) => {
+          console.log("💰 [ASTROLOGER HOME] Earnings updated:", astrologerEarnings);
+          setEarnings(astrologerEarnings);
         });
         
       } catch (err) {
@@ -89,6 +95,7 @@ const UserHome = () => {
     
     return () => {
       socket.off("incomingChatRequest");
+      socket.off("minute-billed");
     };
   }, []);
 
@@ -113,7 +120,7 @@ const UserHome = () => {
 
   const handleAcceptChat = () => {
     setShowModal(false);
-    router.push(`/astrologerdashboard/chatpage?userId=${chatRequest.userId}`);
+    router.push(`/astrologerdashboard/chatpage?userId=${chatRequest.userId}&requestId=${chatRequest.requestId}`);
   };
 
   const handleRejectChat = () => {

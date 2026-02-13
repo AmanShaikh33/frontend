@@ -3,9 +3,9 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 
 
-const API_URL = "http://10.88.89.72:5000/api"; // For network development
+//const API_URL = "http://10.88.89.72:5000/api"; // For network development
 // const API_URL = "http://localhost:5000/api"; // For local development
-// const API_URL = "https://astro-backend-qdu5.onrender.com/api"; // Render deployment
+ const API_URL = "https://astro-backend-qdu5.onrender.com/api"; // Render deployment
 
 const api = axios.create({
   baseURL: API_URL,
@@ -283,7 +283,7 @@ export const apiGetAstrologerById = async (token: string, astrologerId: string) 
 export const apiCreateOrGetChatRoom = async (token, astrologerId = null, userId = null) => {
   const body = astrologerId ? { astrologerId } : { userId };
 
-  const response = await fetch("http://10.88.89.72:5000/api/chat/create-room", {
+  const response = await fetch("http://astro-backend-qdu5.onrender.com/api/chat/create-room", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -424,7 +424,7 @@ export const apiEndChat = async (
 
 export const apiAcceptChatRequest = async (token, requestId) => {
   const res = await fetch(
-    "http://10.88.89.72:5000/api/chat/accept",
+    "https://astro-backend-qdu5.onrender.com/api/chat/accept",
     {
       method: "POST",
       headers: {

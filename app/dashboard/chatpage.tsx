@@ -8,9 +8,10 @@ import {
   Alert,
   StyleSheet,
   BackHandler,
+  Modal,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { jwtDecode } from "jwt-decode";
 import { socket } from "../../lib/socket";
 import {
@@ -29,6 +30,7 @@ interface Message {
 
 export default function UserChatPage() {
   const { astrologerId } = useLocalSearchParams<{ astrologerId: string }>();
+  const router = useRouter();
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
@@ -42,6 +44,9 @@ export default function UserChatPage() {
   const [userCoins, setUserCoins] = useState(0);
   const [sessionCost, setSessionCost] = useState(0);
   const [elapsedTime, setElapsedTime] = useState(0);
+  const [showSummaryModal, setShowSummaryModal] = useState(false);
+  const [chatSummary, setChatSummary] = useState<any>(null);
+  const [timerInterval, setTimerInterval] = useState<NodeJS.Timeout | null>(null);
 
   const hasEmittedRequest = useRef(false);
 
@@ -95,14 +100,14 @@ export default function UserChatPage() {
         console.log("✅ User profile loaded, coins:", profile.coins);
 
         /* 🔥 REMOVE OLD LISTENERS FIRST */
-        socket.off("chat-accepted");
-        socket.off("chatAccepted");
-        socket.off("minute-billed");
-        socket.off("timer-tick");
-        socket.off("force-end-chat");
-        socket.off("chatEnded");
-        socket.off("receiveMessage");
-        socket.off("insufficient-coins");
+        socket.removeAllListeners("chat-accepted");
+        socket.removeAllListeners("chatAccepted");
+        socket.removeAllListeners("minute-billed");
+        socket.removeAllListeners("timer-tick");
+        socket.removeAllListeners("force-end-chat");
+        socket.removeAllListeners("chatEnded");
+        socket.removeAllListeners("receiveMessage");
+        socket.removeAllListeners("insufficient-coins");
 
         /* ❌ INSUFFICIENT COINS */
         socket.on("insufficient-coins", ({ message, required, current }) => {
@@ -116,16 +121,24 @@ export default function UserChatPage() {
         });
 
         /* ✅ CHAT ACCEPTED */
-        socket.on("chat-accepted", async ({ sessionId }) => {
+        socket.once("chat-accepted", async ({ sessionId }) => {
+          if (!mounted) return;
           console.log("✅ chat-accepted received! SessionId:", sessionId);
           setSessionId(sessionId);
           setWaitingForAcceptance(false);
           socket.emit("joinSession", { sessionId });
           const msgs = await apiGetMessages(token, sessionId);
           setMessages(msgs);
+          
+          // Start client-side timer
+          const timer = setInterval(() => {
+            setElapsedTime(prev => prev + 1);
+          }, 1000);
+          setTimerInterval(timer);
         });
 
-        socket.on("chatAccepted", async (data) => {
+        socket.once("chatAccepted", async (data) => {
+          if (!mounted) return;
           console.log("✅ chatAccepted received! Data:", data);
           const sid = data.sessionId || data.session || data;
           setSessionId(sid);
@@ -137,6 +150,7 @@ export default function UserChatPage() {
 
         /* 💰 BILLING */
         socket.on("minute-billed", ({ minutes, coinsLeft }) => {
+          if (!mounted) return;
           console.log("💰 Minute billed - Minutes:", minutes, "Coins left:", coinsLeft);
           setUserCoins(coinsLeft);
           setSessionCost(minutes * (astro.pricePerMinute || 0));
@@ -144,25 +158,39 @@ export default function UserChatPage() {
 
         /* ⏱️ TIMER */
         socket.on("timer-tick", ({ elapsedSeconds }) => {
+          if (!mounted) return;
           setElapsedTime(elapsedSeconds);
         });
 
         /* 🔚 FORCE END CHAT */
         socket.on("force-end-chat", ({ reason }) => {
+          if (!mounted) return;
           console.log("🔚 Force end chat:", reason);
+          if (timerInterval) clearInterval(timerInterval);
           setChatEnded(true);
           Alert.alert("Chat Ended", reason === "INSUFFICIENT_COINS" ? "Insufficient coins to continue" : "Chat ended");
         });
 
         /* 🔚 CHAT ENDED */
         socket.on("chatEnded", ({ totalCoins }) => {
+          if (!mounted) return;
           console.log("🔚 Chat ended - Total coins:", totalCoins);
+          if (timerInterval) clearInterval(timerInterval);
           setChatEnded(true);
-          Alert.alert("Chat Ended", `Total cost: ${totalCoins} coins`);
+          setElapsedTime((currentTime) => {
+            const minutes = Math.floor(currentTime / 60);
+            setChatSummary({
+              minutes,
+              coinsDeducted: totalCoins || sessionCost,
+            });
+            setShowSummaryModal(true);
+            return currentTime;
+          });
         });
 
         /* 📩 RECEIVE MESSAGE */
         socket.on("receiveMessage", (msg: Message) => {
+          if (!mounted) return;
           setMessages((prev) => [...prev, msg]);
         });
 
@@ -200,15 +228,17 @@ export default function UserChatPage() {
     return () => {
       mounted = false;
       backHandler.remove();
+      
+      if (timerInterval) clearInterval(timerInterval);
 
-      socket.off("chat-accepted");
-      socket.off("chatAccepted");
-      socket.off("minute-billed");
-      socket.off("timer-tick");
-      socket.off("force-end-chat");
-      socket.off("chatEnded");
-      socket.off("receiveMessage");
-      socket.off("insufficient-coins");
+      socket.removeAllListeners("chat-accepted");
+      socket.removeAllListeners("chatAccepted");
+      socket.removeAllListeners("minute-billed");
+      socket.removeAllListeners("timer-tick");
+      socket.removeAllListeners("force-end-chat");
+      socket.removeAllListeners("chatEnded");
+      socket.removeAllListeners("receiveMessage");
+      socket.removeAllListeners("insufficient-coins");
     };
   }, [astrologerId]);
 
@@ -234,12 +264,23 @@ export default function UserChatPage() {
   const endChat = async () => {
     if (!sessionId || chatEnded) return;
 
-    socket.emit("endChat", {
-      roomId: sessionId,
-      endedBy: "user",
-    });
-
-    setChatEnded(true);
+    Alert.alert(
+      "End Chat",
+      "Are you sure you want to end the chat?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Yes",
+          onPress: () => {
+            socket.emit("endChat", {
+              roomId: sessionId,
+              endedBy: "user",
+            });
+            setChatEnded(true);
+          }
+        }
+      ]
+    );
   };
 
   /* ===============================
@@ -299,6 +340,30 @@ export default function UserChatPage() {
           <Text style={styles.send}>Send</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Chat Summary Modal */}
+      <Modal
+        visible={showSummaryModal}
+        transparent={true}
+        animationType="fade"
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.summaryModal}>
+            <Text style={styles.summaryTitle}>✅ Chat Ended</Text>
+            <Text style={styles.summaryText}>Talk Duration: {chatSummary?.minutes || 0} minutes</Text>
+            <Text style={styles.summaryDeducted}>💰 Coins Deducted: {chatSummary?.coinsDeducted || 0}</Text>
+            <TouchableOpacity
+              style={styles.okButton}
+              onPress={() => {
+                setShowSummaryModal(false);
+                router.replace('/dashboard/(tabs)/home');
+              }}
+            >
+              <Text style={styles.okButtonText}>OK</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -331,4 +396,11 @@ const styles = StyleSheet.create({
   inputBar: { flexDirection: "row", padding: 10, position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: 'white' },
   input: { flex: 1, borderWidth: 1, borderRadius: 20, paddingHorizontal: 10 },
   send: { marginLeft: 10, color: "blue", fontWeight: "bold" },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
+  summaryModal: { backgroundColor: 'white', borderRadius: 16, padding: 24, width: '85%', alignItems: 'center' },
+  summaryTitle: { fontSize: 22, fontWeight: 'bold', marginBottom: 16, color: '#2d1e3f' },
+  summaryText: { fontSize: 16, marginBottom: 8, color: '#555' },
+  summaryDeducted: { fontSize: 18, fontWeight: 'bold', marginBottom: 20, color: '#e74c3c' },
+  okButton: { backgroundColor: '#e0c878', paddingHorizontal: 32, paddingVertical: 12, borderRadius: 8 },
+  okButtonText: { color: '#2d1e3f', fontWeight: 'bold', fontSize: 16 },
 });

@@ -15,9 +15,9 @@ export default function HistoryScreen() {
     try {
       const token = await AsyncStorage.getItem("token");
       console.log("🔑 Token:", token ? "exists" : "missing");
-      console.log("📡 Calling: http://10.88.89.72:5000/api/chat/history");
+      console.log("📡 Calling: http://astro-backend-qdu5.onrender.com/api/chat/history");
       
-      const res = await axios.get("http://10.88.89.72:5000/api/chat/history", {
+      const res = await axios.get("http://astro-backend-qdu5.onrender.com/api/chat/history", {
         headers: { Authorization: `Bearer ${token}` },
       });
       

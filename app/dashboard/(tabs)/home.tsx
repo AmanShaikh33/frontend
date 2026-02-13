@@ -18,6 +18,8 @@ import {
   apiGetWalletBalance,
 } from "../../../api/api";
 import { BlurView } from "expo-blur";
+import { socket } from "../../../lib/socket";
+import { jwtDecode } from "jwt-decode";
 
 type AstrologerType = {
   _id: string;
@@ -72,6 +74,21 @@ export default function HomeScreen() {
 
         const data = await apiGetApprovedAstrologers();
         setAstrologers(data);
+
+        // Connect socket and listen for real-time coin updates
+        if (!socket.connected) {
+          socket.connect();
+        }
+
+        const decoded: any = jwtDecode(token);
+        socket.emit("userOnline", { userId: decoded.id });
+
+        // Listen for minute-billed event to update coins in real-time
+        socket.on("minute-billed", ({ coinsLeft }) => {
+          console.log("💰 [USER HOME] Coins updated:", coinsLeft);
+          setWalletBalance(coinsLeft);
+        });
+
       } catch (err: any) {
         setError(err.message || "Failed to load data");
       } finally {
@@ -80,6 +97,10 @@ export default function HomeScreen() {
     };
 
     loadData();
+
+    return () => {
+      socket.off("minute-billed");
+    };
   }, []);
 
   const handleLogout = async () => {
