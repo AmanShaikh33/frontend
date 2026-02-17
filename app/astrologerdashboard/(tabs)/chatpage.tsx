@@ -1,4 +1,4 @@
-// app/astrologerdashboard/chatpage.tsx
+
 
 import React, { useEffect, useState } from "react";
 import {
@@ -79,7 +79,7 @@ export default function AstrologerChatPage() {
         console.log("🔮 Astrologer ID:", decoded.id);
         console.log("🔌 Socket connected:", socket.connected);
 
-        // Connect socket if not connected
+        
         if (!socket.connected) {
           console.log("🔌 Socket not connected, connecting now...");
           socket.connect();
@@ -93,22 +93,20 @@ export default function AstrologerChatPage() {
           console.log("✅ Socket connected successfully");
         }
 
-        // Register astrologer online
         socket.emit("astrologerOnline", { astrologerId: decoded.id });
         console.log("🟢 Astrologer registered online:", decoded.id);
 
-        // Load user info
+    
         const userDetails = await apiGetUserById(token, userId);
         setUserInfo(userDetails);
         setUserCoins(userDetails.coins || 0);
         console.log("✅ User info loaded:", userDetails.name, "Coins:", userDetails.coins);
 
-        // Load astrologer profile
+       
         const astroProfile = await apiGetMyProfile(token);
         const rate = astroProfile.pricePerMinute || 90;
         console.log("👨⚕️ Astrologer profile loaded:", astroProfile.name, "Rate:", rate);
 
-        // Remove ALL old listeners before adding new ones
         socket.removeAllListeners("receiveMessage");
         socket.removeAllListeners("minute-billed");
         socket.removeAllListeners("timer-tick");
@@ -117,14 +115,14 @@ export default function AstrologerChatPage() {
         socket.removeAllListeners("session-created");
         socket.removeAllListeners("chat-accepted");
 
-        // Listen for chat accepted (from user side or other sources)
+
         socket.on("chat-accepted", async ({ sessionId }) => {
           if (!mounted) return;
           console.log("✅ chat-accepted received! SessionId:", sessionId);
           setChatRoomId(sessionId);
           setChatAccepted(true);
           setBillingActive(true);
-          setElapsedTime(0); // Reset timer for new session
+          setElapsedTime(0); 
           setSessionEarnings(0); // Reset earnings for new session
           socket.emit("joinSession", { sessionId });
           console.log("✅ chatRoomId set to:", sessionId);
@@ -145,10 +143,10 @@ export default function AstrologerChatPage() {
 
         socket.on("minute-billed", ({ minutes, coinsLeft, astrologerEarnings }) => {
           if (!mounted) return;
-          console.log("💰 [ASTROLOGER] Minute billed - Minutes:", minutes, "User coins:", coinsLeft);
+          console.log("[ASTROLOGER] Minute billed - Minutes:", minutes, "User coins:", coinsLeft);
           setUserCoins(coinsLeft);
           const earnings = minutes * rate;
-          console.log("💰 Calculated earnings:", earnings, "=", minutes, "×", rate);
+          console.log("Calculated earnings:", earnings, "=", minutes, "×", rate);
           setSessionEarnings(earnings);
           setBillingActive(true);
         });
@@ -158,7 +156,6 @@ export default function AstrologerChatPage() {
           setElapsedTime(elapsedSeconds);
         });
 
-        // Start client-side timer as fallback
         const timer = setInterval(() => {
           setElapsedTime(prev => prev + 1);
         }, 1000);
@@ -192,16 +189,16 @@ export default function AstrologerChatPage() {
           });
         });
 
-        // If requestId is provided, accept the chat immediately
+        
         if (requestId) {
           console.log("📤 Auto-accepting chat with requestId:", requestId);
           
-          // Listen for session-created BEFORE emitting acceptance
+          
           socket.once("session-created", ({ sessionId }) => {
             if (!mounted) return;
             console.log("✅ Session created after acceptance, sessionId:", sessionId);
             setChatRoomId(sessionId);
-            setElapsedTime(0); // Reset timer for new session
+            setElapsedTime(0); 
             setSessionEarnings(0); // Reset earnings for new session
             socket.emit("joinSession", { sessionId });
             console.log("✅ chatRoomId set to:", sessionId);
@@ -212,11 +209,11 @@ export default function AstrologerChatPage() {
             userId,
           });
           console.log("✅ Chat acceptance emitted");
-          // Set states immediately to show UI
+          
           setChatAccepted(true);
           setBillingActive(true);
         } else {
-          // If no requestId, try to get or create chat room
+          
           try {
             const room = await apiCreateOrGetChatRoom(token, userId);
             console.log("✅ Chat room created/retrieved:", room._id);
@@ -240,7 +237,7 @@ export default function AstrologerChatPage() {
 
     init();
 
-    // Handle back button
+   
     const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
       if (chatRoomId && !chatEnded) {
         socket.emit('endChat', { roomId: chatRoomId, endedBy: 'astrologer' });
@@ -252,10 +249,10 @@ export default function AstrologerChatPage() {
       mounted = false;
       backHandler.remove();
       
-      // Clear timer
+    
       if (timerInterval) clearInterval(timerInterval);
       
-      // Remove all listeners
+  
       socket.removeAllListeners("receiveMessage");
       socket.removeAllListeners("minute-billed");
       socket.removeAllListeners("timer-tick");
@@ -371,7 +368,7 @@ export default function AstrologerChatPage() {
         </TouchableOpacity>
       </View>
 
-      {/* Chat Summary Modal */}
+      
       <Modal
         visible={showSummaryModal}
         transparent={true}

@@ -1,5 +1,12 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, ScrollView } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  ScrollView,
+  StyleSheet,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
@@ -16,9 +23,9 @@ export default function FreeKundliScreen() {
   const [unknownTime, setUnknownTime] = useState(false);
 
   const [isPickerVisible, setPickerVisible] = useState(false);
-  const [pickerMode, setPickerMode] = useState(null);
+  const [pickerMode, setPickerMode] = useState<"date" | "time" | null>(null);
 
-  const showPicker = (mode: string) => {
+  const showPicker = (mode: "date" | "time") => {
     setPickerMode(mode);
     setPickerVisible(true);
   };
@@ -35,51 +42,69 @@ export default function FreeKundliScreen() {
   };
 
   const handleSubmit = () => {
-    console.log({ name, gender, birthDate, birthTime, birthPlace, unknownTime });
-    // API Call or Navigation
+    console.log({
+      name,
+      gender,
+      birthDate,
+      birthTime,
+      birthPlace,
+      unknownTime,
+    });
   };
 
   return (
-    <View className="flex-1 bg-white">
-      {/* Header */}
-      <View className="flex-row items-center p-4 border-b border-gray-200 bg-[#2d1e3f] pt-[40px]">
+    <View style={styles.container}>
+      {/* HEADER */}
+      <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color="#e0c878" />
         </TouchableOpacity>
-        <Text className="text-lg font-bold text-[#e0c878] ml-[110px]">Free Kundli</Text>
+        <Text style={styles.headerTitle}>Free Kundli</Text>
       </View>
 
-      <ScrollView className="px-4 py-6">
+      <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Name */}
-        <Text className="text-[#2d1e3f] mb-2 font-semibold">Enter Name</Text>
-        <View className="flex-row items-center border border-[#e0c878] rounded-lg px-3 mb-6 bg-white shadow">
+        <Text style={styles.label}>Enter Name</Text>
+        <View style={styles.inputContainer}>
           <Ionicons name="person-outline" size={18} color="#604f70" />
           <TextInput
             placeholder="Your Name"
             placeholderTextColor="#9e8b4e"
             value={name}
             onChangeText={setName}
-            className="flex-1 ml-2 py-2 text-black"
+            style={styles.input}
           />
         </View>
 
         {/* Gender */}
-        <Text className="text-[#2d1e3f] mb-2 font-semibold">Select Gender</Text>
-        <View className="flex-row justify-between mb-6">
+        <Text style={styles.label}>Select Gender</Text>
+        <View style={styles.genderRow}>
           {["male", "female", "other"].map((g) => (
             <TouchableOpacity
               key={g}
-              className={`flex-1 items-center py-3 mx-1 rounded-xl ${
-                gender === g ? "bg-[#e0c878]" : "bg-white"
-              } border border-[#e0c878]`}
+              style={[
+                styles.genderBtn,
+                gender === g && styles.genderBtnActive,
+              ]}
               onPress={() => setGender(g)}
             >
               <Ionicons
-                name={g === "male" ? "male" : g === "female" ? "female" : "person"}
+                name={
+                  g === "male"
+                    ? "male"
+                    : g === "female"
+                    ? "female"
+                    : "person"
+                }
                 size={24}
                 color={gender === g ? "#2d1e3f" : "#604f70"}
               />
-              <Text className={`${gender === g ? "text-[#2d1e3f]" : "text-[#604f70]"} font-semibold`}>
+              <Text
+                style={[
+                  styles.genderText,
+                  gender === g && styles.genderTextActive,
+                ]}
+              >
                 {g.charAt(0).toUpperCase() + g.slice(1)}
               </Text>
             </TouchableOpacity>
@@ -87,51 +112,58 @@ export default function FreeKundliScreen() {
         </View>
 
         {/* Birth Date */}
-        <Text className="text-[#2d1e3f] mb-2 font-semibold">Birth Date</Text>
+        <Text style={styles.label}>Birth Date</Text>
         <TouchableOpacity
           onPress={() => showPicker("date")}
-          className="flex-row items-center border border-[#e0c878] rounded-lg px-3 py-3 mb-6 bg-white shadow"
+          style={styles.inputContainer}
         >
           <Ionicons name="calendar-outline" size={18} color="#604f70" />
-          <Text className="ml-2 text-black">{birthDate.toDateString()}</Text>
+          <Text style={styles.dateText}>
+            {birthDate.toDateString()}
+          </Text>
         </TouchableOpacity>
 
         {/* Birth Time */}
         {!unknownTime && (
           <>
-            <Text className="text-[#2d1e3f] mb-2 font-semibold">Birth Time</Text>
+            <Text style={styles.label}>Birth Time</Text>
             <TouchableOpacity
               onPress={() => showPicker("time")}
-              className="flex-row items-center border border-[#e0c878] rounded-lg px-3 py-3 mb-4 bg-white shadow"
+              style={styles.inputContainer}
             >
               <Ionicons name="time-outline" size={18} color="#604f70" />
-              <Text className="ml-2 text-black">
-                {birthTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+              <Text style={styles.dateText}>
+                {birthTime.toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
               </Text>
             </TouchableOpacity>
           </>
         )}
 
-        {/* Unknown Time Checkbox */}
-        <View className="flex-row items-center mb-6">
+        {/* Unknown Time */}
+        <View style={styles.checkboxRow}>
           <Checkbox
             value={unknownTime}
             onValueChange={setUnknownTime}
             color={unknownTime ? "#e0c878" : undefined}
           />
-          <Text className="ml-2 text-gray-700">I don’t know my birth time</Text>
+          <Text style={styles.checkboxText}>
+            I don’t know my birth time
+          </Text>
         </View>
 
         {/* Birth Place */}
-        <Text className="text-[#2d1e3f] mb-2 font-semibold">Place of Birth</Text>
-        <View className="flex-row items-center border border-[#e0c878] rounded-lg px-3 mb-10 bg-white shadow">
+        <Text style={styles.label}>Place of Birth</Text>
+        <View style={styles.inputContainer}>
           <Ionicons name="location-outline" size={18} color="#604f70" />
           <TextInput
             placeholder="City, Country"
             placeholderTextColor="#9e8b4e"
             value={birthPlace}
             onChangeText={setBirthPlace}
-            className="flex-1 ml-2 py-2 text-black"
+            style={styles.input}
           />
         </View>
       </ScrollView>
@@ -139,12 +171,12 @@ export default function FreeKundliScreen() {
       {/* Submit Button */}
       <TouchableOpacity
         onPress={handleSubmit}
-        className="absolute bottom-0 left-0 right-0 bg-[#e0c878] p-4 pb-[35px]"
+        style={styles.submitBtn}
       >
-        <Text className="text-center font-bold text-[#2d1e3f] text-lg">Generate Kundli</Text>
+        <Text style={styles.submitText}>Generate Kundli</Text>
       </TouchableOpacity>
 
-      {/* Date & Time Picker Modal */}
+      {/* DateTime Picker */}
       <DateTimePickerModal
         isVisible={isPickerVisible}
         mode={pickerMode === "date" ? "date" : "time"}
@@ -154,3 +186,120 @@ export default function FreeKundliScreen() {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#fff",
+  },
+
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+    paddingTop: 40,
+    backgroundColor: "#2d1e3f",
+  },
+
+  headerTitle: {
+    flex: 1,
+    textAlign: "center",
+    color: "#e0c878",
+    fontSize: 18,
+    fontWeight: "700",
+    marginRight: 24,
+  },
+
+  scrollContent: {
+    padding: 16,
+    paddingBottom: 120,
+  },
+
+  label: {
+    color: "#2d1e3f",
+    marginBottom: 6,
+    fontWeight: "600",
+  },
+
+  inputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#e0c878",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    marginBottom: 20,
+    backgroundColor: "#fff",
+  },
+
+  input: {
+    flex: 1,
+    marginLeft: 8,
+    color: "#000",
+  },
+
+  dateText: {
+    marginLeft: 8,
+    color: "#000",
+  },
+
+  genderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 20,
+  },
+
+  genderBtn: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 14,
+    marginHorizontal: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#e0c878",
+    backgroundColor: "#fff",
+  },
+
+  genderBtnActive: {
+    backgroundColor: "#e0c878",
+  },
+
+  genderText: {
+    marginTop: 6,
+    fontWeight: "600",
+    color: "#604f70",
+  },
+
+  genderTextActive: {
+    color: "#2d1e3f",
+  },
+
+  checkboxRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+
+  checkboxText: {
+    marginLeft: 8,
+    color: "#555",
+  },
+
+  submitBtn: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: "#e0c878",
+    padding: 18,
+    paddingBottom: 32,
+  },
+
+  submitText: {
+    textAlign: "center",
+    fontWeight: "700",
+    color: "#2d1e3f",
+    fontSize: 16,
+  },
+});

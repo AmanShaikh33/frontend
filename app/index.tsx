@@ -40,7 +40,7 @@ export default function Index() {
     checkLogin();
   }, []);
 
-  /* ------------------ IMAGE PULSE ------------------ */
+
   const imageScale = useRef(new Animated.Value(0.95)).current;
   useEffect(() => {
     Animated.loop(
@@ -59,7 +59,7 @@ export default function Index() {
     ).start();
   }, []);
 
-  /* ------------------ BUTTON PULSE ------------------ */
+
   const buttonScale = useRef(new Animated.Value(1)).current;
   useEffect(() => {
     Animated.loop(
@@ -78,7 +78,7 @@ export default function Index() {
     ).start();
   }, []);
 
-  /* ------------------ LOADING ------------------ */
+  
   if (loading) {
     return (
       <View style={styles.loading}>
@@ -89,13 +89,13 @@ export default function Index() {
 
   return (
     <View style={styles.container}>
-      {/* Decorative stars */}
+    
       <View style={[styles.star, styles.star1]} />
       <View style={[styles.star, styles.star2]} />
       <View style={[styles.star, styles.star3]} />
       <View style={[styles.star, styles.star4]} />
 
-      {/* Animated Image */}
+    
       <Animated.Image
         source={astroappimg}
         style={[styles.image, { transform: [{ scale: imageScale }] }]}
@@ -108,7 +108,7 @@ export default function Index() {
         Explore the mystical world of astrology with personalized guidance
       </Text>
 
-      {/* Start Button */}
+   
       <Animated.View style={{ transform: [{ scale: buttonScale }] }}>
         <TouchableOpacity
           onPress={() => router.push("/(auth)/login")}

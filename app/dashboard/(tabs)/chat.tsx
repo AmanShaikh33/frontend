@@ -35,7 +35,7 @@ export default function Chat() {
   const [astrologers, setAstrologers] = useState<AstrologerType[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  // 🔥 MODAL STATE (SAME AS HOME)
+
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedAstro, setSelectedAstro] =
     useState<AstrologerType | null>(null);
@@ -98,7 +98,7 @@ export default function Chat() {
                 <AstrologerComponent
                   key={astro._id}
                   {...astro}
-                  status={astro.availability} // 🔥 REQUIRED
+                  status={astro.availability} 
                   price={astro.pricePerMinute}
                   onChatPress={() => {
                     console.log("CHAT CLICKED:", astro.name);
@@ -112,7 +112,7 @@ export default function Chat() {
         </View>
       </ScrollView>
 
-      {/* 🔥 MODAL (IDENTICAL BEHAVIOR AS HOME) */}
+     
       {modalVisible && selectedAstro && (
         <BlurView intensity={40} tint="dark" style={styles.blur}>
           <View style={styles.modal}>
@@ -150,7 +150,7 @@ export default function Chat() {
   );
 }
 
-/* ===================== STYLES ===================== */
+
 
 const styles = StyleSheet.create({
   container: {
@@ -202,7 +202,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
 
-  /* MODAL */
+ 
   blur: {
     position: "absolute",
     top: 0,

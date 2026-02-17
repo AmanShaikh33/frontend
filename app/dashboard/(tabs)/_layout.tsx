@@ -6,10 +6,10 @@ export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: "#e0c878", // Golden Yellow active
-        tabBarInactiveTintColor: "#9e8b4e", // Earthy Gold inactive
+        tabBarActiveTintColor: "#e0c878", 
+        tabBarInactiveTintColor: "#9e8b4e", 
         tabBarStyle: {
-          backgroundColor: "#2d1e3f", // Deep Purple
+          backgroundColor: "#2d1e3f", 
           position: "absolute",
           marginHorizontal: 20,
           marginBottom: Platform.OS === "ios" ? 30 : 30,

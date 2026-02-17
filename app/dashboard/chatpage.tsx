@@ -50,9 +50,6 @@ export default function UserChatPage() {
 
   const hasEmittedRequest = useRef(false);
 
-  /* ===============================
-     🔌 SOCKET + INIT (SAFE)
-  =============================== */
   useEffect(() => {
     let mounted = true;
 
@@ -83,23 +80,23 @@ export default function UserChatPage() {
           console.log("✅ Socket already connected");
         }
 
-        // Register user online
+   
         socket.emit("userOnline", { userId: decoded.id });
         console.log("🟢 User registered online:", decoded.id);
 
-        // Load astrologer info
+      
         console.log("🔍 Loading astrologer info...");
         const astro = await apiGetAstrologerById(token, astrologerId);
         setAstrologerInfo(astro);
         console.log("✅ Astrologer info loaded:", astro.name);
 
-        // Load user coins
+        
         console.log("🔍 Loading user profile...");
         const profile = await apiGetMe(token);
         setUserCoins(profile.coins || 0);
         console.log("✅ User profile loaded, coins:", profile.coins);
 
-        /* 🔥 REMOVE OLD LISTENERS FIRST */
+
         socket.removeAllListeners("chat-accepted");
         socket.removeAllListeners("chatAccepted");
         socket.removeAllListeners("minute-billed");
@@ -109,7 +106,7 @@ export default function UserChatPage() {
         socket.removeAllListeners("receiveMessage");
         socket.removeAllListeners("insufficient-coins");
 
-        /* ❌ INSUFFICIENT COINS */
+        
         socket.on("insufficient-coins", ({ message, required, current }) => {
           console.log("❌ Insufficient coins:", message);
           setWaitingForAcceptance(false);
@@ -120,17 +117,17 @@ export default function UserChatPage() {
           );
         });
 
-        /* ✅ CHAT ACCEPTED */
+       
         socket.once("chat-accepted", async ({ sessionId }) => {
           if (!mounted) return;
-          console.log("✅ chat-accepted received! SessionId:", sessionId);
+          console.log("chat-accepted received! SessionId:", sessionId);
           setSessionId(sessionId);
           setWaitingForAcceptance(false);
           socket.emit("joinSession", { sessionId });
           const msgs = await apiGetMessages(token, sessionId);
           setMessages(msgs);
           
-          // Start client-side timer
+          
           const timer = setInterval(() => {
             setElapsedTime(prev => prev + 1);
           }, 1000);
@@ -148,7 +145,7 @@ export default function UserChatPage() {
           setMessages(msgs);
         });
 
-        /* 💰 BILLING */
+      
         socket.on("minute-billed", ({ minutes, coinsLeft }) => {
           if (!mounted) return;
           console.log("💰 Minute billed - Minutes:", minutes, "Coins left:", coinsLeft);
@@ -156,13 +153,13 @@ export default function UserChatPage() {
           setSessionCost(minutes * (astro.pricePerMinute || 0));
         });
 
-        /* ⏱️ TIMER */
+        
         socket.on("timer-tick", ({ elapsedSeconds }) => {
           if (!mounted) return;
           setElapsedTime(elapsedSeconds);
         });
 
-        /* 🔚 FORCE END CHAT */
+    
         socket.on("force-end-chat", ({ reason }) => {
           if (!mounted) return;
           console.log("🔚 Force end chat:", reason);
@@ -171,7 +168,7 @@ export default function UserChatPage() {
           Alert.alert("Chat Ended", reason === "INSUFFICIENT_COINS" ? "Insufficient coins to continue" : "Chat ended");
         });
 
-        /* 🔚 CHAT ENDED */
+        
         socket.on("chatEnded", ({ totalCoins }) => {
           if (!mounted) return;
           console.log("🔚 Chat ended - Total coins:", totalCoins);
@@ -188,13 +185,13 @@ export default function UserChatPage() {
           });
         });
 
-        /* 📩 RECEIVE MESSAGE */
+      
         socket.on("receiveMessage", (msg: Message) => {
           if (!mounted) return;
           setMessages((prev) => [...prev, msg]);
         });
 
-        /* 📤 EMIT CHAT REQUEST (ONCE) */
+     
         if (!hasEmittedRequest.current) {
           console.log("📤 About to emit userRequestsChat...");
           console.log("📤 Data:", { astrologerId, userId: decoded.id, userName: decoded.name || "User" });
@@ -242,9 +239,7 @@ export default function UserChatPage() {
     };
   }, [astrologerId]);
 
-  /* ===============================
-     ✉️ SEND MESSAGE
-  =============================== */
+  
   const sendMessage = () => {
     if (!sessionId || chatEnded || !newMessage.trim()) return;
 
@@ -258,9 +253,7 @@ export default function UserChatPage() {
     setNewMessage("");
   };
 
-  /* ===============================
-     🔚 END CHAT
-  =============================== */
+ 
   const endChat = async () => {
     if (!sessionId || chatEnded) return;
 
@@ -283,9 +276,7 @@ export default function UserChatPage() {
     );
   };
 
-  /* ===============================
-     🖼️ UI
-  =============================== */
+ 
   return (
     <View style={styles.container}>
       <Text style={styles.header}>
@@ -303,7 +294,7 @@ export default function UserChatPage() {
       {sessionId && !chatEnded && (
         <View style={styles.billingContainer}>
           <Text style={styles.billing}>
-            💰 Coins: {userCoins} | Cost: {sessionCost} | ⏱️ {Math.floor(elapsedTime / 60)}:{(elapsedTime % 60).toString().padStart(2, '0')}
+            Coins: {userCoins} | Cost: {sessionCost} | ⏱️ {Math.floor(elapsedTime / 60)}:{(elapsedTime % 60).toString().padStart(2, '0')}
           </Text>
           <TouchableOpacity onPress={endChat} style={styles.endButton}>
             <Text style={styles.endButtonText}>End Chat</Text>
@@ -341,7 +332,7 @@ export default function UserChatPage() {
         </TouchableOpacity>
       </View>
 
-      {/* Chat Summary Modal */}
+   
       <Modal
         visible={showSummaryModal}
         transparent={true}
@@ -351,7 +342,7 @@ export default function UserChatPage() {
           <View style={styles.summaryModal}>
             <Text style={styles.summaryTitle}>✅ Chat Ended</Text>
             <Text style={styles.summaryText}>Talk Duration: {chatSummary?.minutes || 0} minutes</Text>
-            <Text style={styles.summaryDeducted}>💰 Coins Deducted: {chatSummary?.coinsDeducted || 0}</Text>
+            <Text style={styles.summaryDeducted}>Coins Deducted: {chatSummary?.coinsDeducted || 0}</Text>
             <TouchableOpacity
               style={styles.okButton}
               onPress={() => {
@@ -368,9 +359,7 @@ export default function UserChatPage() {
   );
 }
 
-/* ===============================
-   🎨 STYLES
-=============================== */
+
 const styles = StyleSheet.create({
   container: { flex: 1, paddingTop: 40, paddingBottom: 80 },
   header: { fontSize: 18, fontWeight: "bold", padding: 10 },

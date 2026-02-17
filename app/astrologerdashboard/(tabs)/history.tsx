@@ -17,7 +17,7 @@ export default function HistoryScreen() {
       console.log("🔑 Token:", token ? "exists" : "missing");
       console.log("📡 Calling: http://astro-backend-qdu5.onrender.com/api/chat/astrologer-history");
       
-      const res = await axios.get("http://astro-backend-qdu5.onrender.com/api/chat/astrologer-history", {
+      const res = await axios.get("http://10.73.18.71:5000/api/chat/astrologer-history", {
         headers: { Authorization: `Bearer ${token}` },
       });
       

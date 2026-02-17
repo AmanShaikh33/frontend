@@ -49,7 +49,7 @@ export default function MatchKundliScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
+    
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color="#e0c878" />
@@ -57,7 +57,7 @@ export default function MatchKundliScreen() {
         <Text style={styles.headerTitle}>Kundli Matching</Text>
       </View>
 
-      {/* Tabs */}
+      
       <View style={styles.tabWrapper}>
         <View style={styles.tabActive}>
           <Text style={styles.tabText}>New Matching</Text>
@@ -65,7 +65,7 @@ export default function MatchKundliScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        {/* Boy Details */}
+        
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Boy&apos;s Details</Text>
 

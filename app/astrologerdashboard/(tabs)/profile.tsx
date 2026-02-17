@@ -119,7 +119,7 @@ export default function Profile() {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
+      
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color="#e0c878" />
@@ -129,7 +129,7 @@ export default function Profile() {
 
       <ScrollView contentContainerStyle={styles.scroll}>
         <View style={styles.card}>
-          {/* Image */}
+        
           <View style={styles.imageBox}>
             {imageUrl ? (
               <Image source={{ uri: imageUrl }} style={styles.avatar} />
@@ -189,7 +189,7 @@ export default function Profile() {
         </View>
       </ScrollView>
 
-      {/* EDIT MODAL */}
+      
       <Modal visible={editModalVisible} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
@@ -226,7 +226,6 @@ export default function Profile() {
   );
 }
 
-/* -------- helpers -------- */
 
 const renderRow = (label: string, value: any) => (
   <View style={styles.row}>

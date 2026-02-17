@@ -75,7 +75,6 @@ export default function HomeScreen() {
         const data = await apiGetApprovedAstrologers();
         setAstrologers(data);
 
-        // Connect socket and listen for real-time coin updates
         if (!socket.connected) {
           socket.connect();
         }
@@ -83,12 +82,9 @@ export default function HomeScreen() {
         const decoded: any = jwtDecode(token);
         socket.emit("userOnline", { userId: decoded.id });
 
-        // Listen for minute-billed event to update coins in real-time
         socket.on("minute-billed", ({ coinsLeft }) => {
-          console.log("💰 [USER HOME] Coins updated:", coinsLeft);
           setWalletBalance(coinsLeft);
         });
-
       } catch (err: any) {
         setError(err.message || "Failed to load data");
       } finally {
@@ -126,7 +122,7 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      {/* HEADER */}
+
       <View style={styles.header}>
         <View style={styles.headerRow}>
           <View style={styles.userRow}>
@@ -155,7 +151,7 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      {/* CONTENT */}
+     
       <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
         <View style={styles.searchBox}>
           <Ionicons name="search" size={20} color="#2d1e3f" />
@@ -166,13 +162,34 @@ export default function HomeScreen() {
           />
         </View>
 
-        <Image
-          source={{
-            uri: "https://img.freepik.com/free-vector/zodiac-astrology-horoscope-banner_1017-31529.jpg",
-          }}
-          style={styles.banner}
-        />
+       
+        <View style={styles.quickRow}>
+          <TouchableOpacity
+            style={styles.quickCard}
+            onPress={() => router.push("/dashboard/horoscope")}
+          >
+            <Ionicons name="planet" size={28} color="#2d1e3f" />
+            <Text style={styles.quickText}>Horoscope</Text>
+          </TouchableOpacity>
 
+          <TouchableOpacity
+            style={styles.quickCard}
+            onPress={() => router.push("/dashboard/freekundli")}
+          >
+            <Ionicons name="document-text" size={28} color="#2d1e3f" />
+            <Text style={styles.quickText}>Free Kundli</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.quickCard}
+            onPress={() => router.push("/dashboard/matchkundli")}
+          >
+            <Ionicons name="heart-circle" size={28} color="#2d1e3f" />
+            <Text style={styles.quickText}>Match Kundli</Text>
+          </TouchableOpacity>
+        </View>
+
+        
         <View style={styles.list}>
           {astrologers.length === 0 ? (
             <Text style={styles.empty}>No astrologers available.</Text>
@@ -184,7 +201,6 @@ export default function HomeScreen() {
                 status={astro.availability}
                 price={astro.pricePerMinute}
                 onChatPress={() => {
-                  console.log("💆 Chat button clicked for astrologer:", astro._id);
                   setSelectedAstro(astro);
                   setModalVisible(true);
                 }}
@@ -194,13 +210,14 @@ export default function HomeScreen() {
         </View>
       </ScrollView>
 
-      {/* BLUR MODAL */}
+   
       {modalVisible && selectedAstro && (
         <BlurView intensity={40} tint="dark" style={styles.blur}>
           <View style={styles.modal}>
             <Text style={styles.modalTitle}>{selectedAstro.name}</Text>
-
-            <Text style={styles.modalText}>₹{selectedAstro.pricePerMinute}/min</Text>
+            <Text style={styles.modalText}>
+              ₹{selectedAstro.pricePerMinute}/min
+            </Text>
 
             <View style={styles.modalRow}>
               <TouchableOpacity
@@ -213,7 +230,6 @@ export default function HomeScreen() {
               <TouchableOpacity
                 style={styles.proceedBtn}
                 onPress={() => {
-                  console.log("🚀 Proceed clicked, navigating to chat with:", selectedAstro._id);
                   setModalVisible(false);
                   router.push({
                     pathname: "/dashboard/chatpage",
@@ -233,32 +249,81 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
-  center: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#2d1e3f" },
+  center: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#2d1e3f",
+  },
   error: { color: "red" },
 
   header: { backgroundColor: "#2d1e3f", paddingTop: 40, padding: 16 },
   headerRow: { flexDirection: "row", justifyContent: "space-between" },
   userRow: { flexDirection: "row", alignItems: "center" },
-  username: { color: "#e0c878", fontSize: 18, fontWeight: "bold", marginLeft: 8 },
+  username: {
+    color: "#e0c878",
+    fontSize: 18,
+    fontWeight: "bold",
+    marginLeft: 8,
+  },
 
   logoutBtn: { backgroundColor: "#e0c878", padding: 6, borderRadius: 6 },
   logoutText: { color: "#2d1e3f", fontWeight: "600" },
 
-  walletRow: { flexDirection: "row", justifyContent: "space-between", marginTop: 12 },
+  walletRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 12,
+  },
   walletBox: { backgroundColor: "#fff", padding: 6, borderRadius: 6 },
   walletText: { fontWeight: "600" },
   addMoneyBtn: { backgroundColor: "#e0c878", padding: 8, borderRadius: 6 },
   addMoneyText: { fontWeight: "600" },
 
-  searchBox: { flexDirection: "row", margin: 16, padding: 10, backgroundColor: "#eee", borderRadius: 20 },
+  searchBox: {
+    flexDirection: "row",
+    margin: 16,
+    padding: 10,
+    backgroundColor: "#eee",
+    borderRadius: 20,
+  },
   searchInput: { marginLeft: 8, flex: 1 },
 
   banner: { height: 160, borderRadius: 12, marginHorizontal: 16 },
 
+  quickRow: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    marginTop: 20,
+    paddingHorizontal: 16,
+  },
+  quickCard: {
+    backgroundColor: "#e0c878",
+    width: 100,
+    height: 100,
+    borderRadius: 16,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  quickText: {
+    marginTop: 6,
+    fontWeight: "600",
+    color: "#2d1e3f",
+    textAlign: "center",
+  },
+
   list: { marginTop: 20, paddingHorizontal: 16 },
   empty: { textAlign: "center", color: "#777" },
 
-  blur: { position: "absolute", top: 0, bottom: 0, left: 0, right: 0, justifyContent: "center", alignItems: "center" },
+  blur: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    justifyContent: "center",
+    alignItems: "center",
+  },
   modal: { backgroundColor: "#fff", width: "85%", padding: 20, borderRadius: 16 },
   modalTitle: { fontSize: 20, fontWeight: "bold", textAlign: "center" },
   modalText: { textAlign: "center", marginVertical: 10 },

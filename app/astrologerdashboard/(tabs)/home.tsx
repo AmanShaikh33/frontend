@@ -39,15 +39,13 @@ const UserHome = () => {
         setUser(parsedUser);
        
         if (parsedUser.availability) setAvailability(parsedUser.availability);
-        
-        // Load earnings and astrologer profile
+      
         await loadEarnings(token);
         
-        // Get astrologer document ID
         const astroProfile = await apiGetMyProfile(token);
         setAstrologerDocId(astroProfile._id);
         
-        // Setup socket connection for chat requests
+       
         const decoded: any = jwtDecode(token);
         console.log("🔌 Connecting astrologer to socket with ID:", decoded.id);
         
@@ -57,13 +55,13 @@ const UserHome = () => {
         
         socket.emit("astrologerOnline", { astrologerId: decoded.id });
         
-        // Listen for incoming chat requests
+        
         socket.on("incomingChatRequest", ({ userId, userName, roomId, requestId }) => {
           console.log("🔔 Received chat request from:", userName, "requestId:", requestId);
           setChatRequest({ userId, userName, roomId, requestId });
           setShowModal(true);
           
-          // Add alert sound/vibration
+         
           Alert.alert(
             "New Chat Request!",
             `${userName} wants to chat with you`,
@@ -77,7 +75,7 @@ const UserHome = () => {
           );
         });
 
-        // Listen for minute-billed event to update earnings in real-time
+        
         socket.on("minute-billed", ({ astrologerEarnings }) => {
           console.log("💰 [ASTROLOGER HOME] Earnings updated:", astrologerEarnings);
           setEarnings(astrologerEarnings);
@@ -139,13 +137,13 @@ const UserHome = () => {
       await apiUpdateAvailability(token, newStatus);
       setAvailability(newStatus);
 
-      // Update socket connection based on availability
+     
       if (newStatus === "online" && user) {
         const decoded: any = jwtDecode(token);
         socket.emit("astrologerOnline", { astrologerId: decoded.id }); // Use user ID
       }
 
-      // Optionally update AsyncStorage userData
+    
       const updatedUser = { ...user, availability: newStatus };
       await AsyncStorage.setItem("userData", JSON.stringify(updatedUser));
     } catch (err: any) {
@@ -170,7 +168,7 @@ const UserHome = () => {
         Welcome, {user?.name || "User"}
       </Text>
 
-      {/* Earnings Display */}
+      
       <View className="bg-[#3c2a52] p-6 rounded-lg mb-6 w-full max-w-sm">
         <Text className="text-lg font-semibold text-[#e0c878] text-center mb-2">
           Total Earnings
@@ -196,10 +194,10 @@ const UserHome = () => {
         </Text>
       </TouchableOpacity>
 
-      {/* Logout Button */}
+      
       <Button title="Logout" onPress={handleLogout} color="#3c2a52" />
       
-      {/* Chat Request Modal */}
+     
       <Modal
         visible={showModal}
         transparent={true}
@@ -209,7 +207,7 @@ const UserHome = () => {
         <View className="flex-1 justify-center items-center bg-black/50">
           <View className="bg-white rounded-lg p-6 mx-6 w-80">
             <Text className="text-xl font-bold text-center mb-4 text-gray-800">
-              💬 Chat Request
+              Chat Request
             </Text>
             <Text className="text-center mb-6 text-gray-600">
               {chatRequest?.userName} wants to chat with you

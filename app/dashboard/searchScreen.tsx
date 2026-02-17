@@ -64,7 +64,7 @@ const SearchScreen = () => {
 
   return (
     <View style={styles.container}>
-      {/* Search Bar */}
+    
       <TextInput
         style={styles.searchInput}
         placeholder="Search astrologer..."
@@ -73,7 +73,7 @@ const SearchScreen = () => {
         onChangeText={setSearchText}
       />
 
-      {/* Results */}
+     
       {filteredAstrologers.length > 0 ? (
         <FlatList
           data={filteredAstrologers}

@@ -36,9 +36,6 @@ export default function AstrologerChatList() {
 
   const hasRegisteredOnline = useRef(false);
 
-  /* ===============================
-     🔌 INIT + SOCKET (SAFE)
-  =============================== */
   useEffect(() => {
     let isMounted = true;
 
@@ -46,28 +43,27 @@ export default function AstrologerChatList() {
       const token = await AsyncStorage.getItem("token");
       if (!token || !isMounted) return;
 
-      // Connect socket if not connected
+     
       if (!socket.connected) {
         socket.connect();
       }
 
-      // Get astrologer profile
+     
       const profile = await apiGetMyProfile(token);
       const astrologerId = profile._id;
 
-      // Register astrologer online (ONCE)
+    
       if (!hasRegisteredOnline.current) {
         socket.emit("astrologerOnline", { astrologerId });
         hasRegisteredOnline.current = true;
         console.log("🟢 Astrologer registered online:", astrologerId);
       }
 
-      // 🔥 CRITICAL FIX:
-      // Remove any existing listener before adding a new one
+
       socket.off("incomingChatRequest");
 
       socket.on("incomingChatRequest", (data) => {
-        console.log("🔥 INCOMING CHAT REQUEST:", data);
+        console.log(" INCOMING CHAT REQUEST:", data);
         setIncomingRequest(data);
         Vibration.vibrate(400);
       });
@@ -93,7 +89,7 @@ export default function AstrologerChatList() {
     if (!incomingRequest) return;
     console.log("✅ Astrologer accepting chat request:", incomingRequest.requestId);
     
-    // Emit acceptance to backend
+  
     socket.emit("astrologerAcceptsChat", {
       requestId: incomingRequest.requestId,
       userId: incomingRequest.userId,
@@ -109,9 +105,6 @@ export default function AstrologerChatList() {
     setIncomingRequest(null);
   };
 
-  /* ===============================
-     🖼️ UI
-  =============================== */
   if (loading) {
     return (
       <View style={styles.center}>
@@ -146,7 +139,7 @@ export default function AstrologerChatList() {
         </View>
       </Modal>
 
-      {/* 📃 CHAT LIST */}
+      
       <FlatList
         data={chats}
         keyExtractor={(i) => i._id}
@@ -166,9 +159,7 @@ export default function AstrologerChatList() {
   );
 }
 
-/* ===============================
-   🎨 STYLES
-=============================== */
+
 const styles = StyleSheet.create({
   container: { flex: 1, paddingTop: 50, paddingHorizontal: 15 },
   header: { fontSize: 22, fontWeight: "bold", marginBottom: 10 },

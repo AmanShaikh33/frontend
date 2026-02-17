@@ -5,7 +5,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 //const API_URL = "http://10.88.89.72:5000/api"; // For network development
 // const API_URL = "http://localhost:5000/api"; // For local development
- const API_URL = "https://astro-backend-qdu5.onrender.com/api"; // Render deployment
+ const API_URL = "https://10.73.18.71:5000/api"; // Render deployment
 
 const api = axios.create({
   baseURL: API_URL,
@@ -30,7 +30,7 @@ api.interceptors.response.use(
   async (error) => {
     if (error.response?.status === 401 || error.message === "Not authorized, token failed") {
       await AsyncStorage.removeItem("token");
-      // Token is invalid, user will be redirected to login by app logic
+      
     }
     return Promise.reject(error);
   }
@@ -51,7 +51,7 @@ interface ApiError {
   [key: string]: any;
 }
 
-/* ------------------- AUTH ------------------- */
+
 
 export const apiRegister = async (data: any) => {
   try {
@@ -70,7 +70,7 @@ export const apiLogin = async (data: any) => {
     });
     
     const res = await api.post("/auth/login", data);
-    return res.data; // { token: string, user: {...} }
+    return res.data;
   } catch (error: any) {
     console.log("🚨 API Login Error:", {
       status: error.response?.status,
@@ -86,7 +86,7 @@ export const apiGetMe = async (token: string) => {
     const res = await api.get("/auth/me", {
       headers: { Authorization: `Bearer ${token}` },
     });
-    return res.data; // returns user object
+    return res.data; 
   } catch (error: any) {
     throw error.response?.data || { message: "Fetching user failed" };
   }
@@ -223,7 +223,7 @@ export const apiGetAstrologersWithFilter = async (token: string, status?: "pendi
       headers: { Authorization: `Bearer ${token}` },
       params: { status },
     });
-    return res.data; // { success, count, astrologers }
+    return res.data; 
   } catch (error: any) {
     throw error.response?.data || { message: "Get astrologers with filter failed" };
   }
@@ -232,7 +232,7 @@ export const apiGetAstrologersWithFilter = async (token: string, status?: "pendi
 // Get only approved astrologers (public endpoint for users)
 export const apiGetApprovedAstrologers = async () => {
   try {
-    const res = await api.get("/astrologers/approved"); // no token header
+    const res = await api.get("/astrologers/approved"); 
     return res.data;
   } catch (error: any) {
     throw error.response?.data || { message: "Get approved astrologers failed" };
@@ -283,7 +283,7 @@ export const apiGetAstrologerById = async (token: string, astrologerId: string) 
 export const apiCreateOrGetChatRoom = async (token, astrologerId = null, userId = null) => {
   const body = astrologerId ? { astrologerId } : { userId };
 
-  const response = await fetch("http://astro-backend-qdu5.onrender.com/api/chat/create-room", {
+  const response = await fetch("http://10.73.18.71:5000/api/chat/create-room", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -424,7 +424,7 @@ export const apiEndChat = async (
 
 export const apiAcceptChatRequest = async (token, requestId) => {
   const res = await fetch(
-    "https://astro-backend-qdu5.onrender.com/api/chat/accept",
+    "https://10.73.18.71:5000/api/chat/accept",
     {
       method: "POST",
       headers: {
