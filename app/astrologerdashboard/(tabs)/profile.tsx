@@ -20,7 +20,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 
-const BASE_URL = "https://astrologyapp-1.onrender.com";
+const BASE_URL = "https://astro-backend-qdu5.onrender.com";
 
 export default function Profile() {
   const router = useRouter();

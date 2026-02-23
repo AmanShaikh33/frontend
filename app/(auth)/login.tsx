@@ -122,7 +122,21 @@ export default function LoginScreen() {
           New here?{" "}
           <Text style={styles.registerBold}>Register</Text>
         </Text>
+
       </TouchableOpacity>
+
+      <TouchableOpacity
+  onPress={() => router.push("/forgotPassword")}
+  style={styles.forgotPasswordLink}
+>
+  <Text style={{ textAlign: "center", color: "#e0c878" }}>
+    Forgot Password?
+  </Text>
+</TouchableOpacity>
+   
+       
+
+
     </KeyboardAvoidingView>
   );
 }
@@ -185,5 +199,9 @@ const styles = StyleSheet.create({
   registerBold: {
     fontWeight: "700",
     color: "#9e8b4e",
+  },
+  forgotPasswordLink: {
+    flex: 1,
+    justifyContent: "center",
   },
 });

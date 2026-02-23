@@ -16,6 +16,7 @@ import {
   apiRejectAstrologer,
   apiAdminDeleteAstrologer,
 } from "../../../api/api";
+import { useRouter } from "expo-router";
 
 interface Astrologer {
   _id: string;
@@ -30,6 +31,8 @@ interface Astrologer {
 }
 
 export default function AdminAstrologers() {
+  const router = useRouter();
+
   const [astrologers, setAstrologers] = useState<Astrologer[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -175,6 +178,18 @@ export default function AdminAstrologers() {
         >
           <Text style={styles.btnText}>Delete</Text>
         </TouchableOpacity>
+
+       <TouchableOpacity
+  style={[styles.btn, { backgroundColor: "#e0c878" }]}
+  onPress={() =>
+    router.push({
+      pathname: "/admindashboard/AdminSettlementScreen",
+      params: { astrologerId: item._id },
+    })
+  }
+>
+  <Text style={styles.btnText}>View Settlement</Text>
+</TouchableOpacity>
       </View>
     </View>
   );

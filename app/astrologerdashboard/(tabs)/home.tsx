@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, Button, ActivityIndicator, TouchableOpacity, Alert, Modal } from "react-native";
+import { View, Text, Button, ActivityIndicator, TouchableOpacity, Alert, Modal,StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { jwtDecode } from "jwt-decode";
@@ -17,6 +17,8 @@ const UserHome = () => {
   const [astrologerDocId, setAstrologerDocId] = useState("");
   const [chatRequest, setChatRequest] = useState<any>(null);
   const [showModal, setShowModal] = useState(false);
+  const [totalPaid, setTotalPaid] = useState<number>(0);
+  const [pendingAmount, setPendingAmount] = useState<number>(0);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -77,9 +79,9 @@ const UserHome = () => {
 
         
         socket.on("minute-billed", ({ astrologerEarnings }) => {
-          console.log("💰 [ASTROLOGER HOME] Earnings updated:", astrologerEarnings);
-          setEarnings(astrologerEarnings);
-        });
+  setEarnings(astrologerEarnings);
+  setPendingAmount(astrologerEarnings - totalPaid);
+});
         
       } catch (err) {
         console.error(err);
@@ -98,16 +100,20 @@ const UserHome = () => {
   }, []);
 
   const loadEarnings = async (token: string) => {
-    setLoadingEarnings(true);
-    try {
-      const response = await apiGetAstrologerEarnings(token);
-      setEarnings(response.earnings || 0);
-    } catch (error: any) {
-      console.error("Failed to load earnings:", error);
-    } finally {
-      setLoadingEarnings(false);
-    }
-  };
+  setLoadingEarnings(true);
+  try {
+    const response = await apiGetAstrologerEarnings(token);
+
+    setEarnings(response.totalEarnings || 0);
+    setTotalPaid(response.totalPaid || 0);
+    setPendingAmount(response.pendingAmount || 0);
+
+  } catch (error: any) {
+    console.error("Failed to load earnings:", error);
+  } finally {
+    setLoadingEarnings(false);
+  }
+};
 
   const handleLogout = async () => {
     await AsyncStorage.removeItem("token");
@@ -155,82 +161,296 @@ const UserHome = () => {
   };
 
   if (loading) {
-    return (
-      <View className="flex-1 justify-center items-center bg-[#2d1e3f]">
-        <ActivityIndicator size="large" color="#e0c878" />
-      </View>
-    );
-  }
-
   return (
-    <View className="flex-1 justify-center items-center bg-[#2d1e3f] px-6">
-      <Text className="text-2xl font-bold text-[#e0c878] mb-6">
-        Welcome, {user?.name || "User"}
-      </Text>
-
-      
-      <View className="bg-[#3c2a52] p-6 rounded-lg mb-6 w-full max-w-sm">
-        <Text className="text-lg font-semibold text-[#e0c878] text-center mb-2">
-          Total Earnings
-        </Text>
-        {loadingEarnings ? (
-          <ActivityIndicator size="small" color="#e0c878" />
-        ) : (
-          <Text className="text-3xl font-bold text-white text-center">
-            ₹{earnings.toFixed(2)}
-          </Text>
-        )}
-      </View>
-
-      <TouchableOpacity
-        onPress={toggleAvailability}
-        className={`py-3 px-6 rounded-lg mb-6 ${
-          availability === "online" ? "bg-green-500" : "bg-red-500"
-        }`}
-        disabled={updating}
-      >
-        <Text className="text-white font-bold text-lg">
-          {updating ? "Updating..." : availability === "online" ? "Go Offline" : "Go Online"}
-        </Text>
-      </TouchableOpacity>
-
-      
-      <Button title="Logout" onPress={handleLogout} color="#3c2a52" />
-      
-     
-      <Modal
-        visible={showModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowModal(false)}
-      >
-        <View className="flex-1 justify-center items-center bg-black/50">
-          <View className="bg-white rounded-lg p-6 mx-6 w-80">
-            <Text className="text-xl font-bold text-center mb-4 text-gray-800">
-              Chat Request
-            </Text>
-            <Text className="text-center mb-6 text-gray-600">
-              {chatRequest?.userName} wants to chat with you
-            </Text>
-            <View className="flex-row justify-around">
-              <TouchableOpacity
-                onPress={handleRejectChat}
-                className="bg-red-500 px-6 py-3 rounded-lg flex-1 mr-2"
-              >
-                <Text className="text-white font-bold text-center">Reject</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={handleAcceptChat}
-                className="bg-green-500 px-6 py-3 rounded-lg flex-1 ml-2"
-              >
-                <Text className="text-white font-bold text-center">Accept</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+    <View style={styles.loadingContainer}>
+      <ActivityIndicator size="large" color="#e0c878" />
+      <Text style={styles.loadingText}>Loading Dashboard...</Text>
     </View>
   );
+}
+
+return (
+  <View style={styles.container}>
+    {/* Header */}
+    <View style={styles.header}>
+      <Text style={styles.welcome}>Welcome</Text>
+      <Text style={styles.username}>{user?.name || "Astrologer"}</Text>
+    </View>
+
+    {/* Earnings Card */}
+    <View style={styles.card}>
+  <Text style={styles.cardTitle}>Earnings Overview</Text>
+
+  {loadingEarnings ? (
+    <ActivityIndicator size="small" color="#e0c878" />
+  ) : (
+    <>
+      <Text style={styles.earnings}>₹ {earnings.toFixed(2)}</Text>
+
+      <View style={{ marginTop: 15 }}>
+        <Text style={{ color: "#cccccc" }}>Total Paid</Text>
+        <Text style={{ color: "#4ade80", fontWeight: "bold", fontSize: 18 }}>
+          ₹ {totalPaid.toFixed(2)}
+        </Text>
+      </View>
+
+      <View style={{ marginTop: 10 }}>
+        <Text style={{ color: "#cccccc" }}>Pending Amount</Text>
+        <Text style={{ color: "#facc15", fontWeight: "bold", fontSize: 18 }}>
+          ₹ {pendingAmount.toFixed(2)}
+        </Text>
+      </View>
+        <TouchableOpacity
+    onPress={() => router.push("/astrologerdashboard/settlement-history")}
+    style={styles.detailsButton}
+  >
+    <Text style={styles.detailsText}>View Details</Text>
+  </TouchableOpacity>
+    </>
+  )}
+</View>
+
+    {/* Availability Card */}
+    <View style={styles.statusCard}>
+      <Text style={styles.statusLabel}>Current Status</Text>
+
+      <View style={styles.statusRow}>
+        <Text
+          style={[
+            styles.statusText,
+            availability === "online"
+              ? styles.online
+              : styles.offline,
+          ]}
+        >
+          {availability === "online" ? "● Online" : "● Offline"}
+        </Text>
+
+        <TouchableOpacity
+          onPress={toggleAvailability}
+          disabled={updating}
+          style={[
+            styles.toggleButton,
+            availability === "online"
+              ? styles.offlineButton
+              : styles.onlineButton,
+          ]}
+        >
+          <Text style={styles.toggleButtonText}>
+            {updating
+              ? "Updating..."
+              : availability === "online"
+              ? "Go Offline"
+              : "Go Online"}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+
+    {/* Logout */}
+    <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
+      <Text style={styles.logoutText}>Logout</Text>
+    </TouchableOpacity>
+
+    {/* Modal */}
+    <Modal
+      visible={showModal}
+      transparent
+      animationType="fade"
+      onRequestClose={() => setShowModal(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContainer}>
+          <Text style={styles.modalTitle}>Incoming Chat</Text>
+          <Text style={styles.modalText}>
+            {chatRequest?.userName} wants to chat with you
+          </Text>
+
+          <View style={styles.modalButtons}>
+            <TouchableOpacity
+              onPress={handleRejectChat}
+              style={[styles.modalButton, styles.reject]}
+            >
+              <Text style={styles.modalButtonText}>Reject</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={handleAcceptChat}
+              style={[styles.modalButton, styles.accept]}
+            >
+              <Text style={styles.modalButtonText}>Accept</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  </View>
+);
 };
 
 export default UserHome;
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#1a102b",
+    paddingHorizontal: 20,
+    paddingTop: 60,
+  },
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: "#1a102b",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    color: "#e0c878",
+    marginTop: 15,
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  header: {
+    marginBottom: 30,
+  },
+  welcome: {
+    fontSize: 28,
+    fontWeight: "800",
+    color: "#ffffff",
+  },
+  username: {
+    fontSize: 20,
+    color: "#e0c878",
+    marginTop: 6,
+    fontWeight: "600",
+  },
+  card: {
+    backgroundColor: "#3c2a52",
+    padding: 25,
+    borderRadius: 20,
+    marginBottom: 25,
+    elevation: 8,
+  },
+  cardTitle: {
+    fontSize: 14,
+    color: "#cccccc",
+    textAlign: "center",
+    marginBottom: 10,
+    letterSpacing: 1,
+  },
+  earnings: {
+    fontSize: 36,
+    fontWeight: "bold",
+    color: "#e0c878",
+    textAlign: "center",
+  },
+  statusCard: {
+    backgroundColor: "#2d1e3f",
+    padding: 20,
+    borderRadius: 20,
+    marginBottom: 30,
+  },
+  statusLabel: {
+    color: "#aaaaaa",
+    fontSize: 14,
+    marginBottom: 12,
+  },
+  statusRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  statusText: {
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+  online: {
+    color: "#4ade80",
+  },
+  offline: {
+    color: "#f87171",
+  },
+  toggleButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 15,
+  },
+  onlineButton: {
+    backgroundColor: "#22c55e",
+  },
+  offlineButton: {
+    backgroundColor: "#ef4444",
+  },
+  toggleButtonText: {
+    color: "#ffffff",
+    fontWeight: "bold",
+  },
+  logoutButton: {
+    backgroundColor: "#e0c878",
+    paddingVertical: 15,
+    borderRadius: 20,
+  },
+  logoutText: {
+    textAlign: "center",
+    fontWeight: "bold",
+    fontSize: 16,
+    color: "#1a102b",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.7)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  modalContainer: {
+    backgroundColor: "#2d1e3f",
+    width: "100%",
+    borderRadius: 20,
+    padding: 25,
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: "bold",
+    color: "#e0c878",
+    textAlign: "center",
+    marginBottom: 15,
+  },
+  modalText: {
+    color: "#cccccc",
+    textAlign: "center",
+    marginBottom: 25,
+  },
+  modalButtons: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 15,
+    marginHorizontal: 5,
+  },
+  reject: {
+    backgroundColor: "#ef4444",
+  },
+  accept: {
+    backgroundColor: "#22c55e",
+  },
+  modalButtonText: {
+    color: "#fff",
+    textAlign: "center",
+    fontWeight: "bold",
+  },
+  detailsButton: {
+  marginTop: 15,
+  paddingVertical: 8,
+  borderRadius: 10,
+  backgroundColor: "#e0c878",
+  alignItems: "center",
+},
+
+detailsText: {
+  color: "#1a102b",
+  fontWeight: "bold",
+},
+});
