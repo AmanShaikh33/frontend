@@ -34,41 +34,48 @@ export default function AstrologerChatList() {
   const [chats, setChats] = useState<ChatPreview[]>([]);
   const [incomingRequest, setIncomingRequest] = useState<any>(null);
 
-  const hasRegisteredOnline = useRef(false);
+  const astrologerIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
+
+    const handleIncomingChat = (data: any) => {
+      console.log("🔔 INCOMING CHAT REQUEST:", data);
+      setIncomingRequest(data);
+      Vibration.vibrate(400);
+    };
+
+    const registerOnline = async (astrologerId: string) => {
+      if (!socket.connected) {
+        socket.connect();
+      }
+
+      socket.emit("astrologerOnline", { astrologerId });
+
+      // Re-register on reconnect
+      socket.on("connect", () => {
+        console.log("🔄 Reconnected. Registering astrologer again.");
+        socket.emit("astrologerOnline", { astrologerId });
+      });
+    };
 
     const init = async () => {
       const token = await AsyncStorage.getItem("token");
       if (!token || !isMounted) return;
 
-     
-      if (!socket.connected) {
-        socket.connect();
-      }
-
-     
       const profile = await apiGetMyProfile(token);
       const astrologerId = profile._id;
 
-    
-      if (!hasRegisteredOnline.current) {
-        socket.emit("astrologerOnline", { astrologerId });
-        hasRegisteredOnline.current = true;
-        console.log("🟢 Astrologer registered online:", astrologerId);
-      }
+      astrologerIdRef.current = astrologerId;
 
+      await registerOnline(astrologerId);
 
-      socket.off("incomingChatRequest");
-
-      socket.on("incomingChatRequest", (data) => {
-        console.log(" INCOMING CHAT REQUEST:", data);
-        setIncomingRequest(data);
-        Vibration.vibrate(400);
-      });
+      // Prevent stacking
+      socket.off("incomingChatRequest", handleIncomingChat);
+      socket.on("incomingChatRequest", handleIncomingChat);
 
       await refreshChats(token);
+
       setLoading(false);
     };
 
@@ -76,7 +83,7 @@ export default function AstrologerChatList() {
 
     return () => {
       isMounted = false;
-      socket.off("incomingChatRequest");
+      socket.off("incomingChatRequest", handleIncomingChat);
     };
   }, []);
 
@@ -87,18 +94,22 @@ export default function AstrologerChatList() {
 
   const acceptChat = () => {
     if (!incomingRequest) return;
-    console.log("✅ Astrologer accepting chat request:", incomingRequest.requestId);
-    
-  
+
+    console.log("✅ Accepting request:", incomingRequest.requestId);
+
     socket.emit("astrologerAcceptsChat", {
       requestId: incomingRequest.requestId,
       userId: incomingRequest.userId,
     });
-    
+
     const userId = incomingRequest.userId;
     const requestId = incomingRequest.requestId;
+
     setIncomingRequest(null);
-    router.push(`/astrologerdashboard/chatpage?userId=${userId}&requestId=${requestId}`);
+
+    router.push(
+      `/astrologerdashboard/chatpage?userId=${userId}&requestId=${requestId}`
+    );
   };
 
   const rejectChat = () => {
@@ -117,7 +128,7 @@ export default function AstrologerChatList() {
     <View style={styles.container}>
       <Text style={styles.header}>Chats</Text>
 
-      {/* 🔔 INCOMING REQUEST MODAL */}
+      {/* Incoming Request Modal */}
       <Modal visible={!!incomingRequest} transparent animationType="fade">
         <View style={styles.overlay}>
           <View style={styles.modal}>
@@ -139,7 +150,6 @@ export default function AstrologerChatList() {
         </View>
       </Modal>
 
-      
       <FlatList
         data={chats}
         keyExtractor={(i) => i._id}
@@ -158,7 +168,6 @@ export default function AstrologerChatList() {
     </View>
   );
 }
-
 
 const styles = StyleSheet.create({
   container: { flex: 1, paddingTop: 50, paddingHorizontal: 15 },

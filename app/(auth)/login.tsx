@@ -201,7 +201,7 @@ const styles = StyleSheet.create({
     color: "#9e8b4e",
   },
   forgotPasswordLink: {
-    flex: 1,
+    marginTop: 16,
     justifyContent: "center",
   },
 });

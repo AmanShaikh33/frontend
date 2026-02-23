@@ -18,7 +18,6 @@ import {
   apiGetAstrologerById,
   apiGetMe,
   apiGetMessages,
-  apiEndChat,
 } from "../../api/api";
 
 interface Message {
@@ -29,7 +28,9 @@ interface Message {
 }
 
 export default function UserChatPage() {
-  const { astrologerId } = useLocalSearchParams<{ astrologerId: string }>();
+  const { astrologerId } =
+    useLocalSearchParams<{ astrologerId: string }>();
+
   const router = useRouter();
 
   const [messages, setMessages] = useState<Message[]>([]);
@@ -38,15 +39,16 @@ export default function UserChatPage() {
   const [astrologerInfo, setAstrologerInfo] = useState<any>(null);
 
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const [waitingForAcceptance, setWaitingForAcceptance] = useState(true);
+  const [waitingForAcceptance, setWaitingForAcceptance] =
+    useState(true);
   const [chatEnded, setChatEnded] = useState(false);
 
   const [userCoins, setUserCoins] = useState(0);
   const [sessionCost, setSessionCost] = useState(0);
   const [elapsedTime, setElapsedTime] = useState(0);
-  const [showSummaryModal, setShowSummaryModal] = useState(false);
+  const [showSummaryModal, setShowSummaryModal] =
+    useState(false);
   const [chatSummary, setChatSummary] = useState<any>(null);
-  const [timerInterval, setTimerInterval] = useState<NodeJS.Timeout | null>(null);
 
   const hasEmittedRequest = useRef(false);
 
@@ -61,141 +63,132 @@ export default function UserChatPage() {
         const decoded: any = jwtDecode(token);
         setUserId(decoded.id);
 
-        console.log("📱 User chat page loaded for astrologer:", astrologerId);
-        console.log("👤 User ID:", decoded.id, "Name:", decoded.name);
-        console.log("🔌 Socket connected:", socket.connected);
-
         if (!socket.connected) {
-          console.log("🔌 Socket not connected, connecting now...");
           socket.connect();
-          await new Promise((resolve) => {
-            if (socket.connected) {
-              resolve(true);
-            } else {
-              socket.once("connect", () => resolve(true));
-            }
+          await new Promise<void>((resolve) => {
+            socket.once("connect", () => resolve());
           });
-          console.log("✅ Socket connected successfully");
-        } else {
-          console.log("✅ Socket already connected");
         }
 
-   
         socket.emit("userOnline", { userId: decoded.id });
-        console.log("🟢 User registered online:", decoded.id);
 
-      
-        console.log("🔍 Loading astrologer info...");
-        const astro = await apiGetAstrologerById(token, astrologerId);
+        const astro = await apiGetAstrologerById(
+          token,
+          astrologerId
+        );
         setAstrologerInfo(astro);
-        console.log("✅ Astrologer info loaded:", astro.name);
 
-        
-        console.log("🔍 Loading user profile...");
         const profile = await apiGetMe(token);
         setUserCoins(profile.coins || 0);
-        console.log("✅ User profile loaded, coins:", profile.coins);
 
+        // Remove old listeners safely
+        socket.off("chat-accepted");
+        socket.off("minute-billed");
+        socket.off("timer-tick");
+        socket.off("force-end-chat");
+        socket.off("chatEnded");
+        socket.off("receiveMessage");
+        socket.off("insufficient-coins");
 
-        socket.removeAllListeners("chat-accepted");
-        socket.removeAllListeners("chatAccepted");
-        socket.removeAllListeners("minute-billed");
-        socket.removeAllListeners("timer-tick");
-        socket.removeAllListeners("force-end-chat");
-        socket.removeAllListeners("chatEnded");
-        socket.removeAllListeners("receiveMessage");
-        socket.removeAllListeners("insufficient-coins");
+        socket.on(
+          "insufficient-coins",
+          ({ required, current }) => {
+            if (!mounted) return;
 
-        
-        socket.on("insufficient-coins", ({ message, required, current }) => {
-          console.log("❌ Insufficient coins:", message);
-          setWaitingForAcceptance(false);
-          Alert.alert(
-            "Insufficient Coins",
-            `You need ${required} coins to chat. You have ${current} coins. Please add coins to your wallet.`,
-            [{ text: "OK" }]
-          );
-        });
+            setWaitingForAcceptance(false);
 
-       
-        socket.once("chat-accepted", async ({ sessionId }) => {
-          if (!mounted) return;
-          console.log("chat-accepted received! SessionId:", sessionId);
-          setSessionId(sessionId);
-          setWaitingForAcceptance(false);
-          socket.emit("joinSession", { sessionId });
-          const msgs = await apiGetMessages(token, sessionId);
-          setMessages(msgs);
-          
-          
-          const timer = setInterval(() => {
-            setElapsedTime(prev => prev + 1);
-          }, 1000);
-          setTimerInterval(timer);
-        });
+            Alert.alert(
+              "Insufficient Coins",
+              `You need ${required} coins. You have ${current}.`
+            );
+          }
+        );
 
-        socket.once("chatAccepted", async (data) => {
-          if (!mounted) return;
-          console.log("✅ chatAccepted received! Data:", data);
-          const sid = data.sessionId || data.session || data;
-          setSessionId(sid);
-          setWaitingForAcceptance(false);
-          socket.emit("joinSession", { sessionId: sid });
-          const msgs = await apiGetMessages(token, sid);
-          setMessages(msgs);
-        });
+        socket.once(
+          "chat-accepted",
+          async ({ sessionId }) => {
+            if (!mounted) return;
 
-      
-        socket.on("minute-billed", ({ minutes, coinsLeft }) => {
-          if (!mounted) return;
-          console.log("💰 Minute billed - Minutes:", minutes, "Coins left:", coinsLeft);
-          setUserCoins(coinsLeft);
-          setSessionCost(minutes * (astro.pricePerMinute || 0));
-        });
+            setSessionId(sessionId);
+            setWaitingForAcceptance(false);
+            setChatEnded(false);
+            setElapsedTime(0);
+            setMessages([]);
 
-        
-        socket.on("timer-tick", ({ elapsedSeconds }) => {
-          if (!mounted) return;
-          setElapsedTime(elapsedSeconds);
-        });
+            socket.emit("joinSession", { sessionId });
 
-    
-        socket.on("force-end-chat", ({ reason }) => {
-          if (!mounted) return;
-          console.log("🔚 Force end chat:", reason);
-          if (timerInterval) clearInterval(timerInterval);
-          setChatEnded(true);
-          Alert.alert("Chat Ended", reason === "INSUFFICIENT_COINS" ? "Insufficient coins to continue" : "Chat ended");
-        });
+            const msgs = await apiGetMessages(
+              token,
+              sessionId
+            );
+            setMessages(msgs);
+          }
+        );
 
-        
-        socket.on("chatEnded", ({ totalCoins }) => {
-          if (!mounted) return;
-          console.log("🔚 Chat ended - Total coins:", totalCoins);
-          if (timerInterval) clearInterval(timerInterval);
-          setChatEnded(true);
-          setElapsedTime((currentTime) => {
-            const minutes = Math.floor(currentTime / 60);
+        // Backend timer source of truth
+        socket.on(
+          "timer-tick",
+          ({ elapsedSeconds }) => {
+            if (!mounted) return;
+            setElapsedTime(elapsedSeconds);
+          }
+        );
+
+        socket.on(
+          "minute-billed",
+          ({ minutes, coinsLeft }) => {
+            if (!mounted) return;
+
+            setUserCoins(coinsLeft);
+            setSessionCost(
+              minutes * (astro.pricePerMinute || 0)
+            );
+          }
+        );
+
+        socket.on(
+          "force-end-chat",
+          ({ reason }) => {
+            if (!mounted) return;
+
+            setChatEnded(true);
+
+            Alert.alert(
+              "Chat Ended",
+              reason === "INSUFFICIENT_COINS"
+                ? "Insufficient coins"
+                : "Chat ended"
+            );
+          }
+        );
+
+        socket.on(
+          "chatEnded",
+          ({ totalCoins }) => {
+            if (!mounted) return;
+
+            setChatEnded(true);
+
+            const minutes = Math.floor(
+              elapsedTime / 60
+            );
+
             setChatSummary({
               minutes,
-              coinsDeducted: totalCoins || sessionCost,
+              coinsDeducted:
+                totalCoins || sessionCost,
             });
-            setShowSummaryModal(true);
-            return currentTime;
-          });
-        });
 
-      
+            setShowSummaryModal(true);
+          }
+        );
+
         socket.on("receiveMessage", (msg: Message) => {
           if (!mounted) return;
           setMessages((prev) => [...prev, msg]);
         });
 
-     
         if (!hasEmittedRequest.current) {
-          console.log("📤 About to emit userRequestsChat...");
-          console.log("📤 Data:", { astrologerId, userId: decoded.id, userName: decoded.name || "User" });
-
           socket.emit("userRequestsChat", {
             astrologerId,
             userId: decoded.id,
@@ -203,45 +196,42 @@ export default function UserChatPage() {
           });
 
           hasEmittedRequest.current = true;
-          console.log("✅ Chat request emitted successfully");
         }
       } catch (error) {
-        console.error("❌ Error in init:", error);
+        console.error(error);
       }
     };
 
     init();
 
-    const backHandler = BackHandler.addEventListener(
-      "hardwareBackPress",
-      () => {
-        if (sessionId && !chatEnded) {
-          endChat();
+    const backHandler =
+      BackHandler.addEventListener(
+        "hardwareBackPress",
+        () => {
+          if (sessionId && !chatEnded) {
+            endChat();
+          }
+          return false;
         }
-        return false;
-      }
-    );
+      );
 
     return () => {
       mounted = false;
       backHandler.remove();
-      
-      if (timerInterval) clearInterval(timerInterval);
 
-      socket.removeAllListeners("chat-accepted");
-      socket.removeAllListeners("chatAccepted");
-      socket.removeAllListeners("minute-billed");
-      socket.removeAllListeners("timer-tick");
-      socket.removeAllListeners("force-end-chat");
-      socket.removeAllListeners("chatEnded");
-      socket.removeAllListeners("receiveMessage");
-      socket.removeAllListeners("insufficient-coins");
+      socket.off("chat-accepted");
+      socket.off("minute-billed");
+      socket.off("timer-tick");
+      socket.off("force-end-chat");
+      socket.off("chatEnded");
+      socket.off("receiveMessage");
+      socket.off("insufficient-coins");
     };
   }, [astrologerId]);
 
-  
   const sendMessage = () => {
-    if (!sessionId || chatEnded || !newMessage.trim()) return;
+    if (!sessionId || chatEnded || !newMessage.trim())
+      return;
 
     socket.emit("sendMessage", {
       sessionId,
@@ -253,40 +243,35 @@ export default function UserChatPage() {
     setNewMessage("");
   };
 
- 
-  const endChat = async () => {
+  const endChat = () => {
     if (!sessionId || chatEnded) return;
 
-    Alert.alert(
-      "End Chat",
-      "Are you sure you want to end the chat?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Yes",
-          onPress: () => {
-            socket.emit("endChat", {
-              roomId: sessionId,
-              endedBy: "user",
-            });
-            setChatEnded(true);
-          }
-        }
-      ]
-    );
+    Alert.alert("End Chat", "Are you sure?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Yes",
+        onPress: () => {
+          socket.emit("endChat", {
+            roomId: sessionId,
+            endedBy: "user",
+          });
+        },
+      },
+    ]);
   };
 
- 
   return (
     <View style={styles.container}>
       <Text style={styles.header}>
-        {astrologerInfo ? `Chat with ${astrologerInfo.name}` : "Loading..."}
+        {astrologerInfo
+          ? `Chat with ${astrologerInfo.name}`
+          : "Loading..."}
       </Text>
 
       {waitingForAcceptance && (
         <View style={styles.waitingContainer}>
           <Text style={styles.waitingText}>
-            ⏳ Waiting for astrologer to accept...
+            ⏳ Waiting for astrologer...
           </Text>
         </View>
       )}
@@ -294,22 +279,36 @@ export default function UserChatPage() {
       {sessionId && !chatEnded && (
         <View style={styles.billingContainer}>
           <Text style={styles.billing}>
-            Coins: {userCoins} | Cost: {sessionCost} | ⏱️ {Math.floor(elapsedTime / 60)}:{(elapsedTime % 60).toString().padStart(2, '0')}
+            Coins: {userCoins} | Cost: {sessionCost} |
+            ⏱️ {Math.floor(elapsedTime / 60)}:
+            {(elapsedTime % 60)
+              .toString()
+              .padStart(2, "0")}
           </Text>
-          <TouchableOpacity onPress={endChat} style={styles.endButton}>
-            <Text style={styles.endButtonText}>End Chat</Text>
+
+          <TouchableOpacity
+            onPress={endChat}
+            style={styles.endButton}
+          >
+            <Text style={styles.endButtonText}>
+              End Chat
+            </Text>
           </TouchableOpacity>
         </View>
       )}
 
       <FlatList
         data={messages}
-        keyExtractor={(i, idx) => i._id ?? idx.toString()}
+        keyExtractor={(i, idx) =>
+          i._id ?? idx.toString()
+        }
         renderItem={({ item }) => (
           <View
             style={[
               styles.msg,
-              item.senderId === userId ? styles.mine : styles.theirs,
+              item.senderId === userId
+                ? styles.mine
+                : styles.theirs,
             ]}
           >
             <Text>{item.content}</Text>
@@ -324,33 +323,46 @@ export default function UserChatPage() {
           onChangeText={setNewMessage}
           editable={!!sessionId && !chatEnded}
           placeholder={
-            sessionId ? "Type a message..." : "Waiting for acceptance..."
+            sessionId
+              ? "Type a message..."
+              : "Waiting..."
           }
         />
+
         <TouchableOpacity onPress={sendMessage}>
           <Text style={styles.send}>Send</Text>
         </TouchableOpacity>
       </View>
 
-   
       <Modal
         visible={showSummaryModal}
-        transparent={true}
+        transparent
         animationType="fade"
       >
         <View style={styles.modalOverlay}>
           <View style={styles.summaryModal}>
-            <Text style={styles.summaryTitle}>✅ Chat Ended</Text>
-            <Text style={styles.summaryText}>Talk Duration: {chatSummary?.minutes || 0} minutes</Text>
-            <Text style={styles.summaryDeducted}>Coins Deducted: {chatSummary?.coinsDeducted || 0}</Text>
+            <Text style={styles.summaryTitle}>
+              Chat Ended
+            </Text>
+            <Text>
+              Duration: {chatSummary?.minutes || 0} min
+            </Text>
+            <Text>
+              Coins Deducted:{" "}
+              {chatSummary?.coinsDeducted || 0}
+            </Text>
             <TouchableOpacity
               style={styles.okButton}
               onPress={() => {
                 setShowSummaryModal(false);
-                router.replace('/dashboard/(tabs)/home');
+                router.replace(
+                  "/dashboard/(tabs)/home"
+                );
               }}
             >
-              <Text style={styles.okButtonText}>OK</Text>
+              <Text style={styles.okButtonText}>
+                OK
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -358,38 +370,3 @@ export default function UserChatPage() {
     </View>
   );
 }
-
-
-const styles = StyleSheet.create({
-  container: { flex: 1, paddingTop: 40, paddingBottom: 80 },
-  header: { fontSize: 18, fontWeight: "bold", padding: 10 },
-  waitingContainer: { padding: 20, alignItems: "center" },
-  waitingText: { fontSize: 16, color: "#f39c12", fontStyle: "italic" },
-  billingContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingHorizontal: 10,
-    marginBottom: 5,
-  },
-  billing: { fontSize: 12, color: "#27ae60" },
-  endButton: {
-    backgroundColor: "#e74c3c",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 15,
-  },
-  endButtonText: { color: "white", fontSize: 12, fontWeight: "bold" },
-  msg: { padding: 10, margin: 5, borderRadius: 10 },
-  mine: { backgroundColor: "#DCF8C6", alignSelf: "flex-end" },
-  theirs: { backgroundColor: "#EEE", alignSelf: "flex-start" },
-  inputBar: { flexDirection: "row", padding: 10, position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: 'white' },
-  input: { flex: 1, borderWidth: 1, borderRadius: 20, paddingHorizontal: 10 },
-  send: { marginLeft: 10, color: "blue", fontWeight: "bold" },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
-  summaryModal: { backgroundColor: 'white', borderRadius: 16, padding: 24, width: '85%', alignItems: 'center' },
-  summaryTitle: { fontSize: 22, fontWeight: 'bold', marginBottom: 16, color: '#2d1e3f' },
-  summaryText: { fontSize: 16, marginBottom: 8, color: '#555' },
-  summaryDeducted: { fontSize: 18, fontWeight: 'bold', marginBottom: 20, color: '#e74c3c' },
-  okButton: { backgroundColor: '#e0c878', paddingHorizontal: 32, paddingVertical: 12, borderRadius: 8 },
-  okButtonText: { color: '#2d1e3f', fontWeight: 'bold', fontSize: 16 },
-});

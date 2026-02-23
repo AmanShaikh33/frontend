@@ -15,8 +15,6 @@ const UserHome = () => {
   const [earnings, setEarnings] = useState<number>(0);
   const [loadingEarnings, setLoadingEarnings] = useState(false);
   const [astrologerDocId, setAstrologerDocId] = useState("");
-  const [chatRequest, setChatRequest] = useState<any>(null);
-  const [showModal, setShowModal] = useState(false);
   const [totalPaid, setTotalPaid] = useState<number>(0);
   const [pendingAmount, setPendingAmount] = useState<number>(0);
 
@@ -57,25 +55,7 @@ const UserHome = () => {
         
         socket.emit("astrologerOnline", { astrologerId: decoded.id });
         
-        
-        socket.on("incomingChatRequest", ({ userId, userName, roomId, requestId }) => {
-          console.log("🔔 Received chat request from:", userName, "requestId:", requestId);
-          setChatRequest({ userId, userName, roomId, requestId });
-          setShowModal(true);
-          
-         
-          Alert.alert(
-            "New Chat Request!",
-            `${userName} wants to chat with you`,
-            [
-              { text: "Reject", onPress: () => setShowModal(false), style: "cancel" },
-              { text: "Accept", onPress: () => {
-                setShowModal(false);
-                router.push(`/astrologerdashboard/chatpage?userId=${userId}&requestId=${requestId}`);
-              }}
-            ]
-          );
-        });
+      
 
         
         socket.on("minute-billed", ({ astrologerEarnings }) => {
@@ -94,7 +74,7 @@ const UserHome = () => {
     loadUser();
     
     return () => {
-      socket.off("incomingChatRequest");
+ 
       socket.off("minute-billed");
     };
   }, []);
@@ -122,15 +102,7 @@ const UserHome = () => {
     router.replace("/login");
   };
 
-  const handleAcceptChat = () => {
-    setShowModal(false);
-    router.push(`/astrologerdashboard/chatpage?userId=${chatRequest.userId}&requestId=${chatRequest.requestId}`);
-  };
 
-  const handleRejectChat = () => {
-    setShowModal(false);
-    setChatRequest(null);
-  };
 
   const toggleAvailability = async () => {
     if (!user) return;
@@ -252,38 +224,7 @@ return (
       <Text style={styles.logoutText}>Logout</Text>
     </TouchableOpacity>
 
-    {/* Modal */}
-    <Modal
-      visible={showModal}
-      transparent
-      animationType="fade"
-      onRequestClose={() => setShowModal(false)}
-    >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContainer}>
-          <Text style={styles.modalTitle}>Incoming Chat</Text>
-          <Text style={styles.modalText}>
-            {chatRequest?.userName} wants to chat with you
-          </Text>
-
-          <View style={styles.modalButtons}>
-            <TouchableOpacity
-              onPress={handleRejectChat}
-              style={[styles.modalButton, styles.reject]}
-            >
-              <Text style={styles.modalButtonText}>Reject</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={handleAcceptChat}
-              style={[styles.modalButton, styles.accept]}
-            >
-              <Text style={styles.modalButtonText}>Accept</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-    </Modal>
+  
   </View>
 );
 };
