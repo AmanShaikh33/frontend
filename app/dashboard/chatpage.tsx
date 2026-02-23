@@ -370,3 +370,126 @@ export default function UserChatPage() {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#fff",
+    padding: 10,
+  },
+
+  header: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 10,
+    textAlign: "center",
+  },
+
+  waitingContainer: {
+    padding: 10,
+    alignItems: "center",
+  },
+
+  waitingText: {
+    fontSize: 16,
+    color: "gray",
+  },
+
+  billingContainer: {
+    padding: 8,
+    backgroundColor: "#f2f2f2",
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+
+  billing: {
+    fontSize: 14,
+    marginBottom: 5,
+  },
+
+  endButton: {
+    backgroundColor: "red",
+    padding: 6,
+    borderRadius: 6,
+    alignItems: "center",
+  },
+
+  endButtonText: {
+    color: "#fff",
+    fontWeight: "bold",
+  },
+
+  msg: {
+    padding: 10,
+    marginVertical: 4,
+    borderRadius: 8,
+    maxWidth: "75%",
+  },
+
+  mine: {
+    alignSelf: "flex-end",
+    backgroundColor: "#d1e7dd",
+  },
+
+  theirs: {
+    alignSelf: "flex-start",
+    backgroundColor: "#f8d7da",
+  },
+
+  inputBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderTopWidth: 1,
+    borderColor: "#ccc",
+    padding: 5,
+  },
+
+  input: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    marginRight: 5,
+  },
+
+  send: {
+    color: "blue",
+    fontWeight: "bold",
+  },
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  summaryModal: {
+    backgroundColor: "#fff",
+    padding: 20,
+    borderRadius: 10,
+    width: "80%",
+    alignItems: "center",
+  },
+
+  summaryTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 10,
+  },
+
+  okButton: {
+    marginTop: 15,
+    backgroundColor: "green",
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+
+  okButtonText: {
+    color: "#fff",
+    fontWeight: "bold",
+  },
+});
