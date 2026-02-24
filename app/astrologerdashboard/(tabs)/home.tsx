@@ -40,10 +40,26 @@ const UserHome = () => {
        
         if (parsedUser.availability) setAvailability(parsedUser.availability);
       
-        await loadEarnings(token);
-        
-        const astroProfile = await apiGetMyProfile(token);
-        setAstrologerDocId(astroProfile._id);
+        // FIRST check profile
+let astroProfile;
+
+try {
+  astroProfile = await apiGetMyProfile(token);
+} catch (err) {
+  console.log("No astrologer profile. Redirecting...");
+  router.replace("/astrologerdashboard/(tabs)/astroform");
+  return; // STOP EXECUTION
+}
+
+if (!astroProfile || !astroProfile._id) {
+  router.replace("/astrologerdashboard/(tabs)/astroform");
+  return;
+}
+
+setAstrologerDocId(astroProfile._id);
+
+// ONLY NOW load earnings
+await loadEarnings(token);
         
        
         const decoded: any = jwtDecode(token);

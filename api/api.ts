@@ -459,6 +459,17 @@ export const apiResetPassword = async (
   return response.data;
 };
 
+export const apiFetchDailyHoroscope = async (sign: string) => {
+  try {
+    const res = await api.post("/horoscope/daily", {
+      sign,
+    });
+
+    return res.data;
+  } catch (error: any) {
+    throw error.response?.data || { message: "Fetch horoscope failed" };
+  }
+};
 
 
 

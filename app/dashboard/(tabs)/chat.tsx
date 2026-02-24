@@ -95,17 +95,24 @@ export default function Chat() {
             astrologers.map((astro) => {
               console.log("Astrologer:", astro.name, "Status:", astro.availability);
               return (
-                <AstrologerComponent
-                  key={astro._id}
-                  {...astro}
-                  status={astro.availability} 
-                  price={astro.pricePerMinute}
-                  onChatPress={() => {
-                    console.log("CHAT CLICKED:", astro.name);
-                    setSelectedAstro(astro);
-                    setModalVisible(true);
-                  }}
-                />
+               <AstrologerComponent
+                 key={astro._id}
+                 {...astro}
+                 status={astro.availability}
+                 price={astro.pricePerMinute}
+                 
+                 onPress={() => {
+                   router.push({
+                     pathname: "/dashboard/astrologer-details",
+                     params: { astrologerId: astro._id },
+                   });
+                 }}
+               
+                 onChatPress={() => {
+                   setSelectedAstro(astro);
+                   setModalVisible(true);
+                 }}
+               />
               );
             })
           )}

@@ -58,7 +58,10 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="astroform"
         options={{
-          href: null,
+          title: "AstroForm",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="create" size={size} color={color} />
+          ),
         }}
       />
       <Tabs.Screen

@@ -1,13 +1,17 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
   TouchableOpacity,
   ScrollView,
   StyleSheet,
+  Alert,
+  ActivityIndicator,
+  Modal,
 } from "react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { apiFetchDailyHoroscope } from "../../api/api";
 
 const zodiacSigns = [
   { name: "Aries", icon: "zodiac-aries" },
@@ -24,26 +28,45 @@ const zodiacSigns = [
   { name: "Pisces", icon: "zodiac-pisces" },
 ];
 
+const zodiacDates = [
+  { sign: "Aries", range: "March 21 – April 19" },
+  { sign: "Taurus", range: "April 20 – May 20" },
+  { sign: "Gemini", range: "May 21 – June 20" },
+  { sign: "Cancer", range: "June 21 – July 22" },
+  { sign: "Leo", range: "July 23 – August 22" },
+  { sign: "Virgo", range: "August 23 – September 22" },
+  { sign: "Libra", range: "September 23 – October 22" },
+  { sign: "Scorpio", range: "October 23 – November 21" },
+  { sign: "Sagittarius", range: "November 22 – December 21" },
+  { sign: "Capricorn", range: "December 22 – January 19" },
+  { sign: "Aquarius", range: "January 20 – February 18" },
+  { sign: "Pisces", range: "February 19 – March 20" },
+];
+
 export default function HoroscopeScreen() {
   const [selectedSign, setSelectedSign] = useState("Aries");
-  const [selectedDay, setSelectedDay] = useState("Today");
+  const [horoscopeData, setHoroscopeData] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
+
   const router = useRouter();
 
-  const horoscopeData = {
-    luckyColours: ["#ff0000", "#0066ff"],
-    mood: "😍",
-    luckyNumber: 7,
-    luckyTime: "04:26 PM",
-    love: {
-      percentage: 40,
-      text:
-        "Romance ignites with fiery passion today. Single Aries may encounter someone who matches their dynamic energy.",
-    },
-    career: {
-      percentage: 60,
-      text:
-        "Professional breakthroughs await as your pioneering spirit shines in the workplace.",
-    },
+  useEffect(() => {
+    loadHoroscope();
+  }, [selectedSign]);
+
+  const loadHoroscope = async () => {
+    try {
+      setLoading(true);
+      const data = await apiFetchDailyHoroscope(
+        selectedSign.toLowerCase()
+      );
+      setHoroscopeData(data);
+    } catch (error: any) {
+      Alert.alert("Error", error.message || "Failed to load horoscope");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -53,8 +76,25 @@ export default function HoroscopeScreen() {
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color="#e0c878" />
         </TouchableOpacity>
+
         <Text style={styles.headerTitle}>Daily Horoscope</Text>
+
+        <TouchableOpacity onPress={() => setModalVisible(true)}>
+          <Ionicons
+            name="information-circle-outline"
+            size={24}
+            color="#e0c878"
+          />
+        </TouchableOpacity>
       </View>
+
+      {loading && (
+        <ActivityIndicator
+          size="large"
+          color="#e0c878"
+          style={{ marginTop: 20 }}
+        />
+      )}
 
       <ScrollView>
         {/* Zodiac Selector */}
@@ -96,97 +136,46 @@ export default function HoroscopeScreen() {
           })}
         </ScrollView>
 
-        {/* Day Selector */}
-        <View style={styles.dayRow}>
-          {["Yesterday", "Today", "Tomorrow"].map((day) => {
-            const active = selectedDay === day;
-            return (
-              <TouchableOpacity
-                key={day}
-                onPress={() => setSelectedDay(day)}
-                style={[
-                  styles.dayBtn,
-                  active && styles.dayBtnActive,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.dayText,
-                    active && styles.dayTextActive,
-                  ]}
-                >
-                  {day}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        {/* Summary Card */}
+        {/* Horoscope Card */}
         <View style={styles.summaryCard}>
-          <Text style={styles.summaryDate}>11-08-2025</Text>
+          <Text style={styles.summaryDate}>
+            {new Date().toLocaleDateString()}
+          </Text>
+
           <Text style={styles.summaryTitle}>
-            Your Daily Horoscope is Ready!
+            {selectedSign} Horoscope
           </Text>
 
-          <View style={styles.summaryRow}>
-            <View style={styles.center}>
-              <Text style={styles.summaryLabel}>Lucky Colours</Text>
-              <View style={styles.colorRow}>
-                {horoscopeData.luckyColours.map((c, i) => (
-                  <View
-                    key={i}
-                    style={[styles.colorDot, { backgroundColor: c }]}
-                  />
-                ))}
-              </View>
-            </View>
-
-            <View style={styles.center}>
-              <Text style={styles.summaryLabel}>Mood</Text>
-              <Text style={styles.mood}>{horoscopeData.mood}</Text>
-            </View>
-
-            <View style={styles.center}>
-              <Text style={styles.summaryLabel}>Lucky Number</Text>
-              <Text style={styles.gold}>{horoscopeData.luckyNumber}</Text>
-            </View>
-
-            <View style={styles.center}>
-              <Text style={styles.summaryLabel}>Lucky Time</Text>
-              <Text style={styles.gold}>{horoscopeData.luckyTime}</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Love */}
-        <View style={styles.sectionCard}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="heart" size={20} color="#2d1e3f" />
-            <Text style={styles.sectionTitle}>Love</Text>
-            <Text style={styles.sectionPercent}>
-              {horoscopeData.love.percentage}%
-            </Text>
-          </View>
-          <Text style={styles.sectionText}>
-            {horoscopeData.love.text}
-          </Text>
-        </View>
-
-        {/* Career */}
-        <View style={[styles.sectionCard, { marginBottom: 100 }]}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="briefcase" size={20} color="#2d1e3f" />
-            <Text style={styles.sectionTitle}>Career</Text>
-            <Text style={styles.sectionPercent}>
-              {horoscopeData.career.percentage}%
-            </Text>
-          </View>
-          <Text style={styles.sectionText}>
-            {horoscopeData.career.text}
+          <Text style={styles.horoscopeText}>
+            {horoscopeData?.description || "Loading..."}
           </Text>
         </View>
       </ScrollView>
+
+      {/* Modal */}
+      <Modal visible={modalVisible} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalTitle}>Zodiac Date Ranges</Text>
+
+            <ScrollView>
+              {zodiacDates.map((item) => (
+                <View key={item.sign} style={styles.dateRow}>
+                  <Text style={styles.dateSign}>{item.sign}</Text>
+                  <Text style={styles.dateRange}>{item.range}</Text>
+                </View>
+              ))}
+            </ScrollView>
+
+            <TouchableOpacity
+              style={styles.closeBtn}
+              onPress={() => setModalVisible(false)}
+            >
+              <Text style={styles.closeText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       {/* Bottom CTA */}
       <TouchableOpacity
@@ -206,17 +195,15 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
     padding: 16,
     paddingTop: 40,
     backgroundColor: "#2d1e3f",
   },
   headerTitle: {
-    flex: 1,
-    textAlign: "center",
     color: "#e0c878",
     fontSize: 18,
     fontWeight: "700",
-    marginRight: 24,
   },
 
   zodiacRow: { paddingHorizontal: 16, paddingVertical: 12 },
@@ -233,76 +220,66 @@ const styles = StyleSheet.create({
   zodiacText: { marginTop: 4, fontSize: 12, color: "#666" },
   zodiacTextActive: { color: "#2d1e3f", fontWeight: "600" },
 
-  dayRow: {
-    flexDirection: "row",
-    justifyContent: "center",
-    marginBottom: 16,
-  },
-  dayBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "#ccc",
-    marginHorizontal: 6,
-  },
-  dayBtnActive: {
-    backgroundColor: "#e0c878",
-    borderColor: "#e0c878",
-  },
-  dayText: { color: "#555" },
-  dayTextActive: { color: "#2d1e3f", fontWeight: "600" },
-
   summaryCard: {
     backgroundColor: "#2d1e3f",
     marginHorizontal: 16,
-    padding: 16,
+    padding: 20,
     borderRadius: 18,
-    marginBottom: 16,
+    marginBottom: 100,
   },
-  summaryDate: { textAlign: "center", color: "#fff" },
+  summaryDate: {
+    textAlign: "center",
+    color: "#fff",
+    marginBottom: 6,
+  },
   summaryTitle: {
     textAlign: "center",
     color: "#e0c878",
-    marginVertical: 8,
+    fontSize: 16,
+    fontWeight: "600",
+    marginBottom: 12,
   },
-  summaryRow: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    marginTop: 10,
+  horoscopeText: {
+    color: "#fff",
+    textAlign: "center",
+    lineHeight: 22,
   },
-  summaryLabel: { color: "#fff", fontSize: 12 },
-  colorRow: { flexDirection: "row", marginTop: 4 },
-  colorDot: { width: 14, height: 14, borderRadius: 7, marginHorizontal: 2 },
-  mood: { fontSize: 18 },
-  gold: { color: "#e0c878" },
-  center: { alignItems: "center" },
 
-  sectionCard: {
-    marginHorizontal: 16,
-    padding: 16,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "#e0c878",
-    backgroundColor: "#fdf8f0",
-    marginBottom: 16,
-  },
-  sectionHeader: {
-    flexDirection: "row",
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
     alignItems: "center",
-    marginBottom: 6,
   },
-  sectionTitle: {
-    marginLeft: 6,
+  modalContainer: {
+    width: "85%",
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 20,
+    maxHeight: "70%",
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    marginBottom: 12,
+    textAlign: "center",
+    color: "#2d1e3f",
+  },
+  dateRow: { marginBottom: 10 },
+  dateSign: { fontWeight: "600", color: "#2d1e3f" },
+  dateRange: { color: "#555" },
+
+  closeBtn: {
+    marginTop: 15,
+    backgroundColor: "#e0c878",
+    padding: 10,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  closeText: {
     fontWeight: "600",
     color: "#2d1e3f",
   },
-  sectionPercent: {
-    marginLeft: "auto",
-    color: "#2d1e3f",
-    fontWeight: "600",
-  },
-  sectionText: { color: "#555" },
 
   bottomBtn: {
     position: "absolute",

@@ -196,15 +196,23 @@ export default function HomeScreen() {
           ) : (
             astrologers.map((astro) => (
               <AstrologerComponent
-                key={astro._id}
-                {...astro}
-                status={astro.availability}
-                price={astro.pricePerMinute}
-                onChatPress={() => {
-                  setSelectedAstro(astro);
-                  setModalVisible(true);
-                }}
-              />
+  key={astro._id}
+  {...astro}
+  status={astro.availability}
+  price={astro.pricePerMinute}
+  
+  onPress={() => {
+    router.push({
+      pathname: "/dashboard/astrologer-details",
+      params: { astrologerId: astro._id },
+    });
+  }}
+
+  onChatPress={() => {
+    setSelectedAstro(astro);
+    setModalVisible(true);
+  }}
+/>
             ))
           )}
         </View>

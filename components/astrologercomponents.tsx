@@ -8,6 +8,8 @@ import {
   StyleSheet,
 } from "react-native";
 
+ const BASE_URL = "https://astro-backend-qdu5.onrender.com";
+
 type Props = {
   _id: string;
   name: string;
@@ -21,6 +23,7 @@ type Props = {
   status: "online" | "offline" | "busy" | string;
   waitTime?: string;
   profilePic?: string;
+  onPress?: () => void; 
   onChatPress?: () => void;
 };
 
@@ -33,20 +36,25 @@ const AstrologerCard: React.FC<Props> = ({
   status,
   waitTime,
   profilePic,
+  onPress,
   onChatPress,
 }) => {
-  const normalizedPic =
-    profilePic && profilePic.startsWith("http")
-      ? profilePic
-      : profilePic
-      ? `https://astro-backend-qdu5.onrender.com/${profilePic.replace(/\\/g, "/")}`
-      : null;
+  const normalizedPic = profilePic
+  ? `${BASE_URL}${profilePic}`
+  : null;
+ console.log("IMAGE URL:", normalizedPic);
+
+
 
   return (
-    <View style={styles.card}>
+    <TouchableOpacity style={styles.card}
+  activeOpacity={0.85}
+  onPress={onPress}>
       {/* Avatar */}
       {normalizedPic ? (
+       
         <Image source={{ uri: normalizedPic }} style={styles.avatar} />
+        
       ) : (
         <View style={styles.avatarFallback}>
           <Ionicons name="person" size={40} color="#2d1e3f" />
@@ -81,10 +89,28 @@ const AstrologerCard: React.FC<Props> = ({
       </View>
 
       {/* Chat Button - Temporarily always enabled for testing */}
-      <TouchableOpacity style={styles.chatBtn} onPress={onChatPress}>
-        <Text style={styles.chatText}>Chat</Text>
-      </TouchableOpacity>
-    </View>
+      {/* Chat Button */}
+<TouchableOpacity
+  style={status === "online" ? styles.chatBtn : styles.chatDisabled}
+  onPress={(e) => {
+    e.stopPropagation();
+    if (status === "online" && onChatPress) {
+      onChatPress();
+    }
+  }}
+  disabled={status !== "online"}
+>
+  <Text
+    style={
+      status === "online"
+        ? styles.chatText
+        : styles.chatDisabledText
+    }
+  >
+    {status === "online" ? "Chat" : "Offline"}
+  </Text>
+</TouchableOpacity>
+    </TouchableOpacity>
   );
 };
 

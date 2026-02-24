@@ -62,8 +62,10 @@ export default function Profile() {
       setPrice(data.pricePerMinute?.toString() || "");
       setExperience(data.experience?.toString() || "");
     } catch (err) {
-      console.error(err);
-    } finally {
+  console.log("No profile found. Redirecting to form...");
+  router.replace("/astrologerdashboard/(tabs)/astroform");
+  return;
+}finally {
       setLoading(false);
     }
   };
@@ -112,11 +114,8 @@ export default function Profile() {
   }
 
   const imageUrl = profile.profilePic
-    ? profile.profilePic.startsWith("http")
-      ? profile.profilePic
-      : `${BASE_URL}/${profile.profilePic.replace(/\\/g, "/")}`
-    : null;
-
+  ? `${BASE_URL}${profile.profilePic}`
+  : null;
   return (
     <View style={styles.container}>
       
