@@ -1,22 +1,14 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
   FlatList,
-  TouchableOpacity,
   ActivityIndicator,
   StyleSheet,
-  Modal,
-  Vibration,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { socket } from "../../../lib/socket";
-import {
-  apiGetUserChats,
-  apiGetMyProfile,
-} from "../../../api/api";
+import { apiGetUserChats } from "../../../api/api";
 
 interface ChatPreview {
   _id: string;
@@ -27,94 +19,40 @@ interface ChatPreview {
   lastMessage?: string;
 }
 
+// This screen now ONLY shows the list of past chats. Listening for new
+// incoming chat requests (the modal, vibration, etc.) is handled once,
+// globally, in astrologerdashboard/_layout.tsx -- it used to also happen
+// here, which meant two separate modals could pop up for the same
+// request, and two separate chat sessions/screens could get created for
+// a single accepted chat. Keeping that logic in exactly one place fixes
+// both problems.
 export default function AstrologerChatList() {
-  const router = useRouter();
-
   const [loading, setLoading] = useState(true);
   const [chats, setChats] = useState<ChatPreview[]>([]);
-  const [incomingRequest, setIncomingRequest] = useState<any>(null);
-
-  const astrologerIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
-
-    const handleIncomingChat = (data: any) => {
-      console.log("🔔 INCOMING CHAT REQUEST:", data);
-      setIncomingRequest(data);
-      Vibration.vibrate(400);
-    };
-
-    const registerOnline = async (astrologerId: string) => {
-      if (!socket.connected) {
-        socket.connect();
-      }
-
-      socket.emit("astrologerOnline", { astrologerId });
-
-      // Re-register on reconnect
-      socket.on("connect", () => {
-        console.log("🔄 Reconnected. Registering astrologer again.");
-        socket.emit("astrologerOnline", { astrologerId });
-      });
-    };
 
     const init = async () => {
       const token = await AsyncStorage.getItem("token");
       if (!token || !isMounted) return;
 
-      const profile = await apiGetMyProfile(token);
-      const astrologerId = profile._id;
-
-      astrologerIdRef.current = astrologerId;
-
-      await registerOnline(astrologerId);
-
-      // Prevent stacking
-      socket.off("incomingChatRequest", handleIncomingChat);
-      socket.on("incomingChatRequest", handleIncomingChat);
-
-      await refreshChats(token);
-
-      setLoading(false);
+      try {
+        const res = await apiGetUserChats(token);
+        if (isMounted) setChats(res);
+      } catch (err) {
+        console.error("Failed to load chats:", err);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
     };
 
     init();
 
     return () => {
       isMounted = false;
-      socket.off("incomingChatRequest", handleIncomingChat);
     };
   }, []);
-
-  const refreshChats = async (token: string) => {
-    const res = await apiGetUserChats(token);
-    setChats(res);
-  };
-
-  const acceptChat = () => {
-    if (!incomingRequest) return;
-
-    console.log("✅ Accepting request:", incomingRequest.requestId);
-
-    socket.emit("astrologerAcceptsChat", {
-      requestId: incomingRequest.requestId,
-      userId: incomingRequest.userId,
-    });
-
-    const userId = incomingRequest.userId;
-    const requestId = incomingRequest.requestId;
-
-    setIncomingRequest(null);
-
-    router.push(
-      `/astrologerdashboard/chatpage?userId=${userId}&requestId=${requestId}`
-    );
-  };
-
-  const rejectChat = () => {
-    setIncomingRequest(null);
-  };
 
   if (loading) {
     return (
@@ -127,28 +65,6 @@ export default function AstrologerChatList() {
   return (
     <View style={styles.container}>
       <Text style={styles.header}>Chats</Text>
-
-      {/* Incoming Request Modal */}
-      <Modal visible={!!incomingRequest} transparent animationType="fade">
-        <View style={styles.overlay}>
-          <View style={styles.modal}>
-            <Text style={styles.title}>New Chat Request</Text>
-            <Text style={styles.subtitle}>
-              User: {incomingRequest?.userName}
-            </Text>
-
-            <View style={styles.row}>
-              <TouchableOpacity style={styles.accept} onPress={acceptChat}>
-                <Text style={styles.acceptText}>Accept</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.reject} onPress={rejectChat}>
-                <Text>Reject</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
 
       <FlatList
         data={chats}
@@ -172,13 +88,11 @@ export default function AstrologerChatList() {
 const styles = StyleSheet.create({
   container: { flex: 1, paddingTop: 50, paddingHorizontal: 15 },
   header: { fontSize: 22, fontWeight: "bold", marginBottom: 10 },
-
   center: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
   },
-
   chatItem: {
     flexDirection: "row",
     padding: 12,
@@ -187,42 +101,6 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     alignItems: "center",
   },
-
   name: { fontWeight: "bold", fontSize: 16 },
   preview: { fontSize: 12, color: "#555" },
-
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "center",
-    padding: 30,
-  },
-
-  modal: {
-    backgroundColor: "#fff",
-    padding: 20,
-    borderRadius: 12,
-  },
-
-  title: { fontSize: 18, fontWeight: "bold", marginBottom: 6 },
-  subtitle: { marginBottom: 15 },
-
-  row: { flexDirection: "row", justifyContent: "space-between" },
-
-  accept: {
-    backgroundColor: "#2d1e3f",
-    padding: 10,
-    borderRadius: 8,
-  },
-
-  acceptText: {
-    color: "white",
-    fontWeight: "bold",
-  },
-
-  reject: {
-    backgroundColor: "#ddd",
-    padding: 10,
-    borderRadius: 8,
-  },
 });

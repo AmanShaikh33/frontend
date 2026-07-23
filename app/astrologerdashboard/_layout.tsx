@@ -91,7 +91,11 @@ export default function AstrologerLayout() {
     const { userId, requestId } = incomingRequest;
     setIncomingRequest(null);
 
-    router.push(
+    // "replace" (not "push") on purpose -- if an old chat screen is
+    // somehow still around, this swaps it out instead of stacking a new
+    // one on top of it. Stacked screens were the reason earnings/coins
+    // looked like they carried over from a previous chat.
+    router.replace(
       `/astrologerdashboard/(tabs)/chatpage?userId=${userId}&requestId=${requestId}`
     );
   };
