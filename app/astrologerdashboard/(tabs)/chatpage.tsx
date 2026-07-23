@@ -32,6 +32,7 @@ export default function AstrologerChatPage() {
     useLocalSearchParams<{ userId: string; requestId?: string }>();
 
   const navigation = useNavigation();
+  const rateRef = React.useRef<number>(90);
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [chatRoomId, setChatRoomId] = useState("");
@@ -76,6 +77,7 @@ export default function AstrologerChatPage() {
 
       const astroProfile = await apiGetMyProfile(token);
       const rate = astroProfile.pricePerMinute || 90;
+      rateRef.current = rate;
 
       // Remove old listeners safely
       socket.off("receiveMessage");
@@ -133,15 +135,13 @@ export default function AstrologerChatPage() {
         Alert.alert("Chat Ended");
       });
 
-      socket.on("chatEnded", ({ sessionEarnings: earnings }) => {
+      socket.on("chatEnded", ({ sessionEarnings: earnings, totalMinutes }) => {
         if (!mounted) return;
 
         setChatEnded(true);
 
-        const minutes = Math.floor(elapsedTime / 60);
-
         setChatSummary({
-          minutes,
+          minutes: totalMinutes ?? Math.floor(elapsedTime / 60),
           earnings: earnings || sessionEarnings,
         });
 
@@ -227,7 +227,12 @@ export default function AstrologerChatPage() {
       {chatAccepted && chatRoomId && (
         <View style={{ padding: 10 }}>
           <Text>
-            💰 User: {userCoins} | Earnings: {sessionEarnings} | ⏱️{" "}
+            💰 User: {userCoins} | Earnings:{" "}
+            {Math.floor(
+              sessionEarnings +
+                (rateRef.current * (elapsedTime % 60)) / 60
+            )}{" "}
+            | ⏱️{" "}
             {Math.floor(elapsedTime / 60)}:
             {(elapsedTime % 60).toString().padStart(2, "0")}
           </Text>

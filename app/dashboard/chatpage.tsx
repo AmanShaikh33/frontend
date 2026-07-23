@@ -51,9 +51,42 @@ export default function UserChatPage() {
   const [chatSummary, setChatSummary] = useState<any>(null);
 
   const hasEmittedRequest = useRef(false);
+  const sessionIdRef = useRef<string | null>(null);
+  const userIdRef = useRef<string>("");
+  const rateRef = useRef<number>(0);
+
+  // A smooth, per-second running total for display only. The real coin
+  // deduction still happens once per full minute on the server (accurate,
+  // never fractional) -- this just gives a "live" feel between those
+  // billed minutes instead of the number sitting still for 60s at a time.
+  // It's automatically corrected to the server's real value the moment
+  // each minute actually gets billed, so it can never drift far.
+  const liveCost = sessionCost + (rateRef.current * (elapsedTime % 60)) / 60;
 
   useEffect(() => {
     let mounted = true;
+
+    // Defined at effect scope (not inside init) so the cleanup below can
+    // remove this exact listener. Reads AsyncStorage itself and uses refs
+    // instead of closed-over state, since it may fire long after mount.
+    const handleReconnect = async () => {
+      if (!mounted) return;
+      const currentUserId = userIdRef.current;
+      if (currentUserId) socket.emit("userOnline", { userId: currentUserId });
+
+      const currentSessionId = sessionIdRef.current;
+      if (!currentSessionId) return;
+
+      socket.emit("joinSession", { sessionId: currentSessionId });
+      try {
+        const token = await AsyncStorage.getItem("token");
+        if (!token) return;
+        const msgs = await apiGetMessages(token, currentSessionId);
+        if (mounted) setMessages(msgs);
+      } catch (e) {
+        console.error("Failed to resync messages on reconnect:", e);
+      }
+    };
 
     const init = async () => {
       try {
@@ -62,6 +95,7 @@ export default function UserChatPage() {
 
         const decoded: any = jwtDecode(token);
         setUserId(decoded.id);
+        userIdRef.current = decoded.id;
 
         if (!socket.connected) {
           socket.connect();
@@ -77,6 +111,7 @@ export default function UserChatPage() {
           astrologerId
         );
         setAstrologerInfo(astro);
+        rateRef.current = astro.pricePerMinute || 0;
 
         const profile = await apiGetMe(token);
         setUserCoins(profile.coins || 0);
@@ -110,6 +145,7 @@ export default function UserChatPage() {
             if (!mounted) return;
 
             setSessionId(sessionId);
+            sessionIdRef.current = sessionId;
             setWaitingForAcceptance(false);
             setChatEnded(false);
             setElapsedTime(0);
@@ -188,6 +224,31 @@ export default function UserChatPage() {
           setMessages((prev) => [...prev, msg]);
         });
 
+        // Server restarted (Render free-tier spin-down, deploy, crash) and
+        // has settled up any missed billing. Rejoin the room so live
+        // updates keep flowing, and quietly re-sync message history in
+        // case anything was sent while we were disconnected.
+        socket.off("session-resumed");
+        socket.on("session-resumed", async ({ sessionId: resumedId }) => {
+          if (!mounted || resumedId !== sessionIdRef.current) return;
+
+          socket.emit("joinSession", { sessionId: resumedId });
+
+          try {
+            const msgs = await apiGetMessages(token, resumedId);
+            if (mounted) setMessages(msgs);
+          } catch (e) {
+            console.error("Failed to resync messages after resume:", e);
+          }
+        });
+
+        // Covers the more common case: the socket itself reconnects
+        // (brief network drop, phone backgrounded, etc.) without the
+        // server necessarily restarting. Without this, the client can
+        // silently stop receiving anything for an active session.
+        socket.off("connect", handleReconnect);
+        socket.on("connect", handleReconnect);
+
         if (!hasEmittedRequest.current) {
           socket.emit("userRequestsChat", {
             astrologerId,
@@ -226,6 +287,8 @@ export default function UserChatPage() {
       socket.off("chatEnded");
       socket.off("receiveMessage");
       socket.off("insufficient-coins");
+      socket.off("session-resumed");
+      socket.off("connect", handleReconnect);
     };
   }, [astrologerId]);
 
@@ -279,7 +342,7 @@ export default function UserChatPage() {
       {sessionId && !chatEnded && (
         <View style={styles.billingContainer}>
           <Text style={styles.billing}>
-            Coins: {userCoins} | Cost: {sessionCost} |
+            Coins: {userCoins} | Cost: {Math.floor(liveCost)} |
             ⏱️ {Math.floor(elapsedTime / 60)}:
             {(elapsedTime % 60)
               .toString()
