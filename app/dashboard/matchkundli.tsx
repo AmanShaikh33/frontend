@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import {
   View,
   Text,
@@ -9,59 +9,194 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
+  Modal,
+  FlatList,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
-import { apiMatchKundli } from "../../api/api"; // ADJUST this path to match where your api.ts actually lives
+import { apiMatchKundli } from "../../api/api";
 
-type PickerMode = "boyDate" | "boyTime" | "girlDate" | "girlTime" | null;
+type PickerMode = "boyTime" | "girlTime" | null;
+type DobTarget = "boy" | "girl" | null;
+
+const MONTHS = [
+  "January","February","March","April","May","June",
+  "July","August","September","October","November","December",
+];
+
+const CURRENT_YEAR = new Date().getFullYear();
+const YEARS = Array.from({ length: 90 }, (_, i) => CURRENT_YEAR - i);
+const DAYS = Array.from({ length: 31 }, (_, i) => i + 1);
+
+function daysInMonth(month: number, year: number) {
+  return new Date(year, month + 1, 0).getDate();
+}
+
+function DobPickerModal({
+  visible,
+  initialDate,
+  onConfirm,
+  onCancel,
+}: {
+  visible: boolean;
+  initialDate: Date;
+  onConfirm: (date: Date) => void;
+  onCancel: () => void;
+}) {
+  const [day, setDay] = useState(initialDate.getDate());
+  const [month, setMonth] = useState(initialDate.getMonth());
+  const [year, setYear] = useState(initialDate.getFullYear());
+
+  const yearListRef = useRef<FlatList>(null);
+  const monthListRef = useRef<FlatList>(null);
+  const dayListRef = useRef<FlatList>(null);
+
+  const maxDay = daysInMonth(month, year);
+  const validDay = Math.min(day, maxDay);
+
+  const ITEM_HEIGHT = 44;
+
+  const renderColumn = (
+    data: (number | string)[],
+    selectedIndex: number,
+    onSelect: (index: number) => void,
+    listRef: React.RefObject<FlatList>,
+    formatLabel: (item: number | string) => string
+  ) => (
+    <FlatList
+      ref={listRef}
+      data={data}
+      keyExtractor={(item) => String(item)}
+      showsVerticalScrollIndicator={false}
+      style={styles.wheelColumn}
+      getItemLayout={(_, index) => ({
+        length: ITEM_HEIGHT,
+        offset: ITEM_HEIGHT * index,
+        index,
+      })}
+      initialScrollIndex={Math.max(0, selectedIndex - 2)}
+      renderItem={({ item, index }) => (
+        <TouchableOpacity
+          style={[
+            styles.wheelItem,
+            index === selectedIndex && styles.wheelItemSelected,
+          ]}
+          onPress={() => onSelect(index)}
+        >
+          <Text
+            style={[
+              styles.wheelItemText,
+              index === selectedIndex && styles.wheelItemTextSelected,
+            ]}
+          >
+            {formatLabel(item)}
+          </Text>
+        </TouchableOpacity>
+      )}
+    />
+  );
+
+  return (
+    <Modal visible={visible} transparent animationType="fade">
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalCard}>
+          <Text style={styles.modalTitle}>Select Date of Birth</Text>
+          <Text style={styles.modalSubtitle}>
+            Tap directly on the year to jump quickly.
+          </Text>
+
+          <View style={styles.wheelRow}>
+            {renderColumn(
+              DAYS.slice(0, maxDay),
+              validDay - 1,
+              (index) => setDay(index + 1),
+              dayListRef,
+              (item) => String(item)
+            )}
+            {renderColumn(
+              MONTHS,
+              month,
+              (index) => setMonth(index),
+              monthListRef,
+              (item) => String(item).slice(0, 3)
+            )}
+            {renderColumn(
+              YEARS,
+              YEARS.indexOf(year),
+              (index) => setYear(YEARS[index]),
+              yearListRef,
+              (item) => String(item)
+            )}
+          </View>
+
+          <View style={styles.modalButtonRow}>
+            <TouchableOpacity style={styles.modalCancelBtn} onPress={onCancel}>
+              <Text style={styles.modalCancelText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.modalConfirmBtn}
+              onPress={() => onConfirm(new Date(year, month, validDay))}
+            >
+              <Text style={styles.modalConfirmText}>Confirm</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
 
 export default function MatchKundliScreen() {
   const router = useRouter();
 
   const [boyName, setBoyName] = useState("");
   const [girlName, setGirlName] = useState("");
-  const [boyDOB, setBoyDOB] = useState(new Date());
-  const [girlDOB, setGirlDOB] = useState(new Date());
+  const [boyDOB, setBoyDOB] = useState(new Date(1998, 0, 1));
+  const [girlDOB, setGirlDOB] = useState(new Date(1999, 0, 1));
   const [boyTime, setBoyTime] = useState(new Date());
   const [girlTime, setGirlTime] = useState(new Date());
   const [boyUnknownTime, setBoyUnknownTime] = useState(false);
   const [girlUnknownTime, setGirlUnknownTime] = useState(false);
 
-  // NEW: birth place text inputs (were previously just placeholders with no state)
   const [boyPlace, setBoyPlace] = useState("");
   const [girlPlace, setGirlPlace] = useState("");
 
   const [pickerMode, setPickerMode] = useState<PickerMode>(null);
-  const [isPickerVisible, setPickerVisible] = useState(false);
+  const [isTimePickerVisible, setTimePickerVisible] = useState(false);
 
-  // NEW: loading + result state for the match API call
+  const [dobTarget, setDobTarget] = useState<DobTarget>(null);
+
   const [isMatching, setIsMatching] = useState(false);
   const [matchResult, setMatchResult] = useState<any>(null);
 
-  const showPicker = (mode: PickerMode) => {
+  const showTimePicker = (mode: PickerMode) => {
     setPickerMode(mode);
-    setPickerVisible(true);
+    setTimePickerVisible(true);
   };
 
-  const hidePicker = () => {
-    setPickerVisible(false);
+  const hideTimePicker = () => {
+    setTimePickerVisible(false);
     setPickerMode(null);
   };
 
-  const handleConfirm = (date: Date) => {
-    if (pickerMode === "boyDate") setBoyDOB(date);
+  const handleTimeConfirm = (date: Date) => {
     if (pickerMode === "boyTime") setBoyTime(date);
-    if (pickerMode === "girlDate") setGirlDOB(date);
     if (pickerMode === "girlTime") setGirlTime(date);
-    hidePicker();
+    hideTimePicker();
   };
 
-  // Helper to format a Date -> "YYYY-MM-DD"
+  const handleDobConfirm = (date: Date) => {
+    if (dobTarget === "boy") setBoyDOB(date);
+    if (dobTarget === "girl") setGirlDOB(date);
+    setDobTarget(null);
+  };
+
   const formatDate = (date: Date) => date.toISOString().split("T")[0];
 
-  // Helper to format a Date -> "HH:mm" (24-hour, matches backend expectation)
+  const formatDateDisplay = (date: Date) =>
+    date.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+
   const formatTime = (date: Date) => {
     const hours = date.getHours().toString().padStart(2, "0");
     const minutes = date.getMinutes().toString().padStart(2, "0");
@@ -69,7 +204,6 @@ export default function MatchKundliScreen() {
   };
 
   const handleMatchHoroscope = async () => {
-    // Basic validation before calling the API
     if (!boyName.trim() || !girlName.trim()) {
       Alert.alert("Missing info", "Please enter both names.");
       return;
@@ -111,170 +245,159 @@ export default function MatchKundliScreen() {
     }
   };
 
-  return (
-    <View style={styles.container}>
-    
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="#e0c878" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Kundli Matching</Text>
+  const scorePercent = matchResult
+    ? Math.round((matchResult.totalScore / matchResult.maxScore) * 100)
+    : 0;
+
+  const scoreColor = useMemo(() => {
+    if (scorePercent >= 66) return "#2f9e44";
+    if (scorePercent >= 50) return "#e0a800";
+    return "#d9480f";
+  }, [scorePercent]);
+
+  const renderPersonCard = (
+    title: string,
+    icon: string,
+    name: string,
+    setName: (v: string) => void,
+    dob: Date,
+    onPressDob: () => void,
+    time: Date,
+    onPressTime: () => void,
+    unknownTime: boolean,
+    setUnknownTime: (v: boolean) => void,
+    place: string,
+    setPlace: (v: string) => void
+  ) => (
+    <View style={styles.card}>
+      <View style={styles.cardHeaderRow}>
+        <View style={styles.cardIconBadge}>
+          <Ionicons name={icon as any} size={18} color="#2d1e3f" />
+        </View>
+        <Text style={styles.cardTitle}>{title}</Text>
       </View>
 
-      
+      <Text style={styles.label}>Name</Text>
+      <View style={styles.inputRow}>
+        <Ionicons name="person-outline" size={18} color="#a3915a" />
+        <TextInput
+          value={name}
+          onChangeText={setName}
+          placeholder="Enter name"
+          placeholderTextColor="#b7a56a"
+          style={styles.input}
+        />
+      </View>
+
+      <View style={styles.rowSplit}>
+        <View style={styles.halfField}>
+          <Text style={styles.label}>Birth Date</Text>
+          <TouchableOpacity style={styles.pickerRow} onPress={onPressDob}>
+            <Ionicons name="calendar-outline" size={18} color="#a3915a" />
+            <Text style={styles.pickerText}>{formatDateDisplay(dob)}</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.halfField}>
+          <Text style={styles.label}>Birth Time</Text>
+          <TouchableOpacity style={styles.pickerRow} onPress={onPressTime}>
+            <Ionicons name="time-outline" size={18} color="#a3915a" />
+            <Text style={styles.pickerText}>
+              {time.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <View style={styles.switchRow}>
+        <Switch
+          value={unknownTime}
+          onValueChange={setUnknownTime}
+          trackColor={{ false: "#ddd", true: "#e0c878" }}
+          thumbColor="#fff"
+        />
+        <Text style={styles.switchText}>Don&apos;t know exact time of birth</Text>
+      </View>
+      <Text style={styles.note}>Without time of birth, results are approximate</Text>
+
+      <Text style={styles.label}>Birth Place</Text>
+      <View style={styles.inputRow}>
+        <Ionicons name="location-outline" size={18} color="#a3915a" />
+        <TextInput
+          value={place}
+          onChangeText={setPlace}
+          placeholder="e.g. Pune, India"
+          placeholderTextColor="#b7a56a"
+          style={styles.input}
+        />
+      </View>
+    </View>
+  );
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} hitSlop={12}>
+          <Ionicons name="arrow-back" size={24} color="#e0c878" />
+        </TouchableOpacity>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.headerTitle}>Kundli Matching</Text>
+          <Text style={styles.headerSubtitle}>Vedic compatibility check</Text>
+        </View>
+        <View style={{ width: 24 }} />
+      </View>
+
       <View style={styles.tabWrapper}>
         <View style={styles.tabActive}>
+          <Ionicons name="sparkles-outline" size={16} color="#2d1e3f" />
           <Text style={styles.tabText}>New Matching</Text>
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
-        
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Boy&apos;s Details</Text>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        {renderPersonCard(
+          "Boy's Details", "man-outline",
+          boyName, setBoyName,
+          boyDOB, () => setDobTarget("boy"),
+          boyTime, () => showTimePicker("boyTime"),
+          boyUnknownTime, setBoyUnknownTime,
+          boyPlace, setBoyPlace
+        )}
 
-          <Text style={styles.label}>Name</Text>
-          <View style={styles.inputRow}>
-            <Ionicons name="person-outline" size={18} color="#604f70" />
-            <TextInput
-              value={boyName}
-              onChangeText={setBoyName}
-              placeholder="Enter name"
-              placeholderTextColor="#9e8b4e"
-              style={styles.input}
-            />
-          </View>
+        {renderPersonCard(
+          "Girl's Details", "woman-outline",
+          girlName, setGirlName,
+          girlDOB, () => setDobTarget("girl"),
+          girlTime, () => showTimePicker("girlTime"),
+          girlUnknownTime, setGirlUnknownTime,
+          girlPlace, setGirlPlace
+        )}
 
-          <Text style={styles.label}>Birth Date</Text>
-          <TouchableOpacity
-            style={styles.pickerRow}
-            onPress={() => showPicker("boyDate")}
-          >
-            <Ionicons name="calendar-outline" size={18} color="#604f70" />
-            <Text style={styles.pickerText}>{boyDOB.toDateString()}</Text>
-          </TouchableOpacity>
-
-          <Text style={styles.label}>Birth Time</Text>
-          <TouchableOpacity
-            style={styles.pickerRow}
-            onPress={() => showPicker("boyTime")}
-          >
-            <Ionicons name="time-outline" size={18} color="#604f70" />
-            <Text style={styles.pickerText}>
-              {boyTime.toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-            </Text>
-          </TouchableOpacity>
-
-          <View style={styles.switchRow}>
-            <Switch value={boyUnknownTime} onValueChange={setBoyUnknownTime} />
-            <Text style={styles.switchText}>
-              Don&apos;t know my exact time of birth
-            </Text>
-          </View>
-
-          <Text style={styles.note}>
-            Note: Without time of birth, predictions are ~80% accurate
-          </Text>
-
-          <Text style={styles.label}>Birth Place</Text>
-          <View style={styles.inputRow}>
-            <Ionicons name="location-outline" size={18} color="#604f70" />
-            <TextInput
-              value={boyPlace}
-              onChangeText={setBoyPlace}
-              placeholder="New Delhi, India"
-              placeholderTextColor="#9e8b4e"
-              style={styles.input}
-            />
-          </View>
-        </View>
-
-        {/* Girl Details */}
-        <View style={[styles.card, { marginBottom: 20 }]}>
-          <Text style={styles.cardTitle}>Girl&apos;s Details</Text>
-
-          <Text style={styles.label}>Name</Text>
-          <View style={styles.inputRow}>
-            <Ionicons name="person-outline" size={18} color="#604f70" />
-            <TextInput
-              value={girlName}
-              onChangeText={setGirlName}
-              placeholder="Enter name"
-              placeholderTextColor="#9e8b4e"
-              style={styles.input}
-            />
-          </View>
-
-          <Text style={styles.label}>Birth Date</Text>
-          <TouchableOpacity
-            style={styles.pickerRow}
-            onPress={() => showPicker("girlDate")}
-          >
-            <Ionicons name="calendar-outline" size={18} color="#604f70" />
-            <Text style={styles.pickerText}>{girlDOB.toDateString()}</Text>
-          </TouchableOpacity>
-
-          <Text style={styles.label}>Birth Time</Text>
-          <TouchableOpacity
-            style={styles.pickerRow}
-            onPress={() => showPicker("girlTime")}
-          >
-            <Ionicons name="time-outline" size={18} color="#604f70" />
-            <Text style={styles.pickerText}>
-              {girlTime.toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-            </Text>
-          </TouchableOpacity>
-
-          <View style={styles.switchRow}>
-            <Switch value={girlUnknownTime} onValueChange={setGirlUnknownTime} />
-            <Text style={styles.switchText}>
-              Don&apos;t know my exact time of birth
-            </Text>
-          </View>
-
-          <Text style={styles.note}>
-            Note: Without time of birth, predictions are ~80% accurate
-          </Text>
-
-          <Text style={styles.label}>Birth Place</Text>
-          <View style={styles.inputRow}>
-            <Ionicons name="location-outline" size={18} color="#604f70" />
-            <TextInput
-              value={girlPlace}
-              onChangeText={setGirlPlace}
-              placeholder="New Delhi, India"
-              placeholderTextColor="#9e8b4e"
-              style={styles.input}
-            />
-          </View>
-        </View>
-
-        {/* NEW: Result card, shown after a successful match */}
         {matchResult && (
-          <View style={[styles.card, { marginBottom: 120 }]}>
+          <View style={[styles.card, styles.resultCard]}>
             <Text style={styles.cardTitle}>Match Result</Text>
-            <Text style={styles.resultScore}>
-              {matchResult.totalScore} / {matchResult.maxScore}
+
+            <View style={styles.scoreCircleWrap}>
+              <View style={[styles.scoreCircle, { borderColor: scoreColor }]}>
+                <Text style={[styles.scoreCircleText, { color: scoreColor }]}>
+                  {matchResult.totalScore}
+                </Text>
+                <Text style={styles.scoreCircleMax}>/ {matchResult.maxScore}</Text>
+              </View>
+            </View>
+            <Text style={[styles.resultVerdict, { color: scoreColor }]}>
+              {matchResult.verdict}
             </Text>
-            <Text style={styles.resultVerdict}>{matchResult.verdict}</Text>
 
             {matchResult.warnings?.length > 0 && (
-              <View style={{ marginTop: 8 }}>
+              <View style={styles.warningBox}>
                 {matchResult.warnings.map((w: string, i: number) => (
-                  <Text key={i} style={styles.note}>
-                    ⚠️ {w}
-                  </Text>
+                  <Text key={i} style={styles.warningText}>Warning: {w}</Text>
                 ))}
               </View>
             )}
 
-            <View style={{ marginTop: 12 }}>
+            <View style={styles.kootaList}>
               {Object.entries(matchResult.koota || {}).map(([key, value]: any) => (
                 <View key={key} style={styles.kootaRow}>
                   <Text style={styles.kootaLabel}>{key}</Text>
@@ -287,163 +410,134 @@ export default function MatchKundliScreen() {
           </View>
         )}
 
-        {!matchResult && <View style={{ marginBottom: 120 }} />}
+        <View style={{ height: 110 }} />
       </ScrollView>
 
-      {/* Submit */}
       <TouchableOpacity
         style={[styles.submitBtn, isMatching && { opacity: 0.7 }]}
         onPress={handleMatchHoroscope}
         disabled={isMatching}
+        activeOpacity={0.85}
       >
         {isMatching ? (
           <ActivityIndicator color="#2d1e3f" />
         ) : (
-          <Text style={styles.submitText}>Match Horoscope</Text>
+          <>
+            <Ionicons name="heart" size={18} color="#2d1e3f" style={{ marginRight: 8 }} />
+            <Text style={styles.submitText}>Match Horoscope</Text>
+          </>
         )}
       </TouchableOpacity>
 
       <DateTimePickerModal
-        isVisible={isPickerVisible}
-        mode={pickerMode?.includes("Date") ? "date" : "time"}
-        onConfirm={handleConfirm}
-        onCancel={hidePicker}
+        isVisible={isTimePickerVisible}
+        mode="time"
+        onConfirm={handleTimeConfirm}
+        onCancel={hideTimePicker}
+      />
+
+      <DobPickerModal
+        visible={dobTarget !== null}
+        initialDate={dobTarget === "boy" ? boyDOB : girlDOB}
+        onConfirm={handleDobConfirm}
+        onCancel={() => setDobTarget(null)}
       />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
-
+  container: { flex: 1, backgroundColor: "#f7f5f0" },
   header: {
     flexDirection: "row",
     alignItems: "center",
     padding: 16,
-    paddingTop: 40,
+    paddingTop: 44,
+    paddingBottom: 18,
     backgroundColor: "#2d1e3f",
+    gap: 12,
   },
-  headerTitle: {
-    flex: 1,
-    textAlign: "center",
-    color: "#e0c878",
-    fontSize: 18,
-    fontWeight: "700",
-    marginRight: 24,
-  },
-
+  headerTitle: { textAlign: "center", color: "#e0c878", fontSize: 18, fontWeight: "700" },
+  headerSubtitle: { textAlign: "center", color: "#b7a9c9", fontSize: 12, marginTop: 2 },
   tabWrapper: {
-    margin: 16,
-    backgroundColor: "#604f70",
-    borderRadius: 12,
-    overflow: "hidden",
+    margin: 16, marginBottom: 8, backgroundColor: "#fff", borderRadius: 14,
+    overflow: "hidden", borderWidth: 1, borderColor: "#eee",
   },
   tabActive: {
-    paddingVertical: 12,
-    backgroundColor: "#e0c878",
+    flexDirection: "row", justifyContent: "center", alignItems: "center",
+    gap: 6, paddingVertical: 12, backgroundColor: "#e0c878",
   },
-  tabText: {
-    textAlign: "center",
-    fontWeight: "700",
-    color: "#2d1e3f",
-  },
-
-  content: { paddingHorizontal: 16 },
-
+  tabText: { fontWeight: "700", color: "#2d1e3f" },
+  content: { paddingHorizontal: 16, paddingTop: 8 },
   card: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: "#ddd",
+    backgroundColor: "#fff", borderRadius: 18, padding: 18, marginBottom: 16,
+    borderWidth: 1, borderColor: "#f0ebe0", shadowColor: "#2d1e3f",
+    shadowOpacity: 0.06, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 2,
   },
-  cardTitle: {
-    textAlign: "center",
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#2d1e3f",
-    marginBottom: 12,
+  cardHeaderRow: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 16 },
+  cardIconBadge: {
+    width: 34, height: 34, borderRadius: 10, backgroundColor: "#f3e8c9",
+    alignItems: "center", justifyContent: "center",
   },
-
-  label: { color: "#555", marginBottom: 4 },
-
+  cardTitle: { fontSize: 17, fontWeight: "700", color: "#2d1e3f" },
+  label: { color: "#8a7f6a", marginBottom: 6, fontSize: 12, fontWeight: "600", letterSpacing: 0.3 },
   inputRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#e0c878",
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    marginBottom: 12,
+    flexDirection: "row", alignItems: "center", borderWidth: 1.2, borderColor: "#eee0bd",
+    backgroundColor: "#fffdf7", borderRadius: 12, paddingHorizontal: 12, marginBottom: 14, gap: 8,
   },
-  input: { flex: 1, marginLeft: 8, paddingVertical: 8 },
-
+  input: { flex: 1, paddingVertical: 10, color: "#2d1e3f" },
+  rowSplit: { flexDirection: "row", gap: 12 },
+  halfField: { flex: 1 },
   pickerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#e0c878",
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 12,
+    flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1.2,
+    borderColor: "#eee0bd", backgroundColor: "#fffdf7", borderRadius: 12, padding: 12, marginBottom: 14,
   },
-  pickerText: { marginLeft: 8 },
-
-  switchRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 6,
-  },
-  switchText: { marginLeft: 8, color: "#555" },
-
-  note: { fontSize: 12, color: "#888", marginBottom: 12 },
-
+  pickerText: { color: "#2d1e3f", fontWeight: "500" },
+  switchRow: { flexDirection: "row", alignItems: "center", marginTop: 2, marginBottom: 4, gap: 8 },
+  switchText: { color: "#5c5347", fontSize: 13 },
+  note: { fontSize: 11, color: "#a89f8c", marginBottom: 14, marginLeft: 2 },
   submitBtn: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: 18,
-    paddingBottom: 32,
-    backgroundColor: "#e0c878",
-    alignItems: "center",
-    justifyContent: "center",
+    position: "absolute", bottom: 0, left: 0, right: 0, flexDirection: "row",
+    padding: 18, paddingBottom: 34, backgroundColor: "#e0c878", alignItems: "center",
+    justifyContent: "center", borderTopLeftRadius: 20, borderTopRightRadius: 20,
+    shadowColor: "#2d1e3f", shadowOpacity: 0.15, shadowRadius: 12,
+    shadowOffset: { width: 0, height: -4 }, elevation: 8,
   },
-  submitText: {
-    textAlign: "center",
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#2d1e3f",
+  submitText: { fontSize: 17, fontWeight: "700", color: "#2d1e3f" },
+  resultCard: { alignItems: "center" },
+  scoreCircleWrap: { marginVertical: 12 },
+  scoreCircle: {
+    width: 110, height: 110, borderRadius: 55, borderWidth: 5,
+    alignItems: "center", justifyContent: "center", backgroundColor: "#fdfcf9",
   },
-
-  // NEW styles for the result card
-  resultScore: {
-    textAlign: "center",
-    fontSize: 32,
-    fontWeight: "800",
-    color: "#2d1e3f",
-  },
-  resultVerdict: {
-    textAlign: "center",
-    fontSize: 16,
-    color: "#604f70",
-    marginTop: 4,
-    marginBottom: 8,
-  },
+  scoreCircleText: { fontSize: 30, fontWeight: "800" },
+  scoreCircleMax: { fontSize: 12, color: "#a89f8c", marginTop: -2 },
+  resultVerdict: { fontSize: 15, fontWeight: "700", marginBottom: 12 },
+  warningBox: { backgroundColor: "#fff6e0", borderRadius: 10, padding: 10, width: "100%", marginBottom: 12 },
+  warningText: { fontSize: 12, color: "#8a6d1f" },
+  kootaList: { width: "100%" },
   kootaRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: 6,
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
+    flexDirection: "row", justifyContent: "space-between", paddingVertical: 9,
+    borderBottomWidth: 1, borderBottomColor: "#f2efe8",
   },
-  kootaLabel: {
-    textTransform: "capitalize",
-    color: "#555",
+  kootaLabel: { textTransform: "capitalize", color: "#5c5347", fontWeight: "500" },
+  kootaScore: { fontWeight: "700", color: "#2d1e3f" },
+  modalOverlay: {
+    flex: 1, backgroundColor: "rgba(20,14,30,0.55)",
+    alignItems: "center", justifyContent: "center", padding: 24,
   },
-  kootaScore: {
-    fontWeight: "700",
-    color: "#2d1e3f",
-  },
+  modalCard: { backgroundColor: "#fff", borderRadius: 20, padding: 20, width: "100%", maxWidth: 400 },
+  modalTitle: { fontSize: 17, fontWeight: "700", color: "#2d1e3f", textAlign: "center" },
+  modalSubtitle: { fontSize: 11, color: "#8a7f6a", textAlign: "center", marginTop: 4, marginBottom: 14 },
+  wheelRow: { flexDirection: "row", height: 220, gap: 4 },
+  wheelColumn: { flex: 1 },
+  wheelItem: { height: 44, alignItems: "center", justifyContent: "center", borderRadius: 8 },
+  wheelItemSelected: { backgroundColor: "#f3e8c9" },
+  wheelItemText: { fontSize: 15, color: "#a89f8c" },
+  wheelItemTextSelected: { color: "#2d1e3f", fontWeight: "700" },
+  modalButtonRow: { flexDirection: "row", gap: 12, marginTop: 18 },
+  modalCancelBtn: { flex: 1, paddingVertical: 13, borderRadius: 12, alignItems: "center", backgroundColor: "#f2efe8" },
+  modalCancelText: { color: "#5c5347", fontWeight: "700" },
+  modalConfirmBtn: { flex: 1, paddingVertical: 13, borderRadius: 12, alignItems: "center", backgroundColor: "#e0c878" },
+  modalConfirmText: { color: "#2d1e3f", fontWeight: "700" },
 });
