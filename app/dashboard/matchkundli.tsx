@@ -13,7 +13,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
-import { apiMatchKundli } from "../../services/api"; // ADJUST this path to match where your api.ts actually lives
+import { apiMatchKundli } from "../../api/api"; // ADJUST this path to match where your api.ts actually lives
 
 type PickerMode = "boyDate" | "boyTime" | "girlDate" | "girlTime" | null;
 
