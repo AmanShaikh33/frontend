@@ -471,6 +471,17 @@ export const apiFetchDailyHoroscope = async (sign: string) => {
   }
 };
 
+// Add this near apiFetchDailyHoroscope in your existing api.ts file
+
+export const apiMatchKundli = async (boy: any, girl: any) => {
+  try {
+    const res = await api.post("/kundli/match", { boy, girl });
+    return res.data;
+  } catch (error: any) {
+    throw error.response?.data || { message: "Kundli matching failed" };
+  }
+};
+
 
 
 
