@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import React from "react";
+import React, { useState } from "react";
 import {
   Image,
   Text,
@@ -40,18 +40,34 @@ const AstrologerCard: React.FC<Props> = ({
   reviewCount,
   onPress,
 }) => {
-  const normalizedPic = profilePic ? `${BASE_URL}${profilePic}` : null;
+  const [imageFailed, setImageFailed] = useState(false);
+
+  // Handles both cases: profilePic already a full URL, or a relative path
+  const normalizedPic = profilePic
+    ? profilePic.startsWith("http")
+      ? profilePic
+      : `${BASE_URL}${profilePic}`
+    : null;
+
   const isOnline = status === "online";
+  const showFallback = !normalizedPic || imageFailed;
 
   return (
-    <TouchableOpacity
-      style={styles.card}
-      activeOpacity={0.85}
-      onPress={onPress}
-    >
+    <TouchableOpacity style={styles.card} activeOpacity={0.85} onPress={onPress}>
       {/* Avatar */}
-      {normalizedPic ? (
-        <Image source={{ uri: normalizedPic }} style={styles.avatar} />
+      {!showFallback ? (
+        <Image
+          source={{ uri: normalizedPic! }}
+          style={styles.avatar}
+          onError={(e) => {
+            console.log(
+              "Image failed to load:",
+              normalizedPic,
+              e.nativeEvent.error
+            );
+            setImageFailed(true);
+          }}
+        />
       ) : (
         <View style={styles.avatarFallback}>
           <Ionicons name="person" size={28} color="#2d1e3f" />
@@ -115,13 +131,7 @@ const styles = StyleSheet.create({
     borderColor: "#eee0bd",
     marginBottom: 12,
   },
-
-  avatar: {
-    width: 52,
-    height: 52,
-    borderRadius: 12,
-  },
-
+  avatar: { width: 52, height: 52, borderRadius: 12 },
   avatarFallback: {
     width: 52,
     height: 52,
@@ -130,17 +140,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-
-  info: {
-    flex: 1,
-    marginLeft: 12,
-  },
-
-  nameRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-
+  info: { flex: 1, marginLeft: 12 },
+  nameRow: { flexDirection: "row", alignItems: "center" },
   name: {
     fontSize: 15,
     fontWeight: "700",
@@ -148,59 +149,18 @@ const styles = StyleSheet.create({
     marginRight: 6,
     maxWidth: "60%",
   },
-
-  statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    marginRight: 4,
-  },
-
-  statusText: {
-    fontSize: 12,
-    fontWeight: "600",
-  },
-
-  skills: {
-    fontSize: 12,
-    color: "#6b7280",
-    marginTop: 2,
-  },
-
-  exp: {
-    fontSize: 12,
-    color: "#6b7280",
-    marginTop: 2,
-  },
-
+  statusDot: { width: 6, height: 6, borderRadius: 3, marginRight: 4 },
+  statusText: { fontSize: 12, fontWeight: "600" },
+  skills: { fontSize: 12, color: "#6b7280", marginTop: 2 },
+  exp: { fontSize: 12, color: "#6b7280", marginTop: 2 },
   bottomRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginTop: 6,
   },
-
-  ratingRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-
-  ratingText: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#2d1e3f",
-  },
-
-  reviewText: {
-    fontSize: 12,
-    fontWeight: "400",
-    color: "#9ca3af",
-  },
-
-  price: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#e0672c",
-  },
+  ratingRow: { flexDirection: "row", alignItems: "center", gap: 4 },
+  ratingText: { fontSize: 12, fontWeight: "700", color: "#2d1e3f" },
+  reviewText: { fontSize: 12, fontWeight: "400", color: "#9ca3af" },
+  price: { fontSize: 13, fontWeight: "700", color: "#e0672c" },
 });
