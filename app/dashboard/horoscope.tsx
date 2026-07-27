@@ -58,9 +58,7 @@ export default function HoroscopeScreen() {
   const loadHoroscope = async () => {
     try {
       setLoading(true);
-      const data = await apiFetchDailyHoroscope(
-        selectedSign.toLowerCase()
-      );
+      const data = await apiFetchDailyHoroscope(selectedSign.toLowerCase());
       setHoroscopeData(data);
     } catch (error: any) {
       Alert.alert("Error", error.message || "Failed to load horoscope");
@@ -73,30 +71,18 @@ export default function HoroscopeScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="#e0c878" />
+        <TouchableOpacity onPress={() => router.back()} hitSlop={10} style={styles.headerIconBtn}>
+          <Ionicons name="arrow-back" size={20} color="#2d1e3f" />
         </TouchableOpacity>
 
         <Text style={styles.headerTitle}>Daily Horoscope</Text>
 
-        <TouchableOpacity onPress={() => setModalVisible(true)}>
-          <Ionicons
-            name="information-circle-outline"
-            size={24}
-            color="#e0c878"
-          />
+        <TouchableOpacity onPress={() => setModalVisible(true)} hitSlop={10} style={styles.headerIconBtn}>
+          <Ionicons name="information-circle-outline" size={20} color="#2d1e3f" />
         </TouchableOpacity>
       </View>
 
-      {loading && (
-        <ActivityIndicator
-          size="large"
-          color="#e0c878"
-          style={{ marginTop: 20 }}
-        />
-      )}
-
-      <ScrollView>
+      <ScrollView contentContainerStyle={{ paddingBottom: 130 }} showsVerticalScrollIndicator={false}>
         {/* Zodiac Selector */}
         <ScrollView
           horizontal
@@ -110,25 +96,16 @@ export default function HoroscopeScreen() {
                 key={sign.name}
                 onPress={() => setSelectedSign(sign.name)}
                 style={styles.zodiacItem}
+                activeOpacity={0.85}
               >
-                <View
-                  style={[
-                    styles.zodiacIcon,
-                    active && styles.zodiacIconActive,
-                  ]}
-                >
+                <View style={[styles.zodiacIcon, active && styles.zodiacIconActive]}>
                   <MaterialCommunityIcons
                     name={sign.icon as any}
-                    size={28}
-                    color={active ? "#2d1e3f" : "#444"}
+                    size={26}
+                    color={active ? "#e0c878" : "#8a7f6a"}
                   />
                 </View>
-                <Text
-                  style={[
-                    styles.zodiacText,
-                    active && styles.zodiacTextActive,
-                  ]}
-                >
+                <Text style={[styles.zodiacText, active && styles.zodiacTextActive]}>
                   {sign.name}
                 </Text>
               </TouchableOpacity>
@@ -138,17 +115,29 @@ export default function HoroscopeScreen() {
 
         {/* Horoscope Card */}
         <View style={styles.summaryCard}>
-          <Text style={styles.summaryDate}>
-            {new Date().toLocaleDateString()}
-          </Text>
+          <View style={styles.summaryHeaderRow}>
+            <View>
+              <Text style={styles.summaryTitle}>{selectedSign} Horoscope</Text>
+              <Text style={styles.summaryDate}>{new Date().toDateString()}</Text>
+            </View>
+            <View style={styles.zodiacBadge}>
+              <MaterialCommunityIcons
+                name={zodiacSigns.find((s) => s.name === selectedSign)?.icon as any}
+                size={26}
+                color="#2d1e3f"
+              />
+            </View>
+          </View>
 
-          <Text style={styles.summaryTitle}>
-            {selectedSign} Horoscope
-          </Text>
+          <View style={styles.divider} />
 
-          <Text style={styles.horoscopeText}>
-            {horoscopeData?.description || "Loading..."}
-          </Text>
+          {loading ? (
+            <ActivityIndicator size="small" color="#2d1e3f" style={{ marginVertical: 12 }} />
+          ) : (
+            <Text style={styles.horoscopeText}>
+              {horoscopeData?.description || "No horoscope available right now."}
+            </Text>
+          )}
         </View>
       </ScrollView>
 
@@ -158,7 +147,7 @@ export default function HoroscopeScreen() {
           <View style={styles.modalContainer}>
             <Text style={styles.modalTitle}>Zodiac Date Ranges</Text>
 
-            <ScrollView>
+            <ScrollView showsVerticalScrollIndicator={false}>
               {zodiacDates.map((item) => (
                 <View key={item.sign} style={styles.dateRow}>
                   <Text style={styles.dateSign}>{item.sign}</Text>
@@ -170,6 +159,7 @@ export default function HoroscopeScreen() {
             <TouchableOpacity
               style={styles.closeBtn}
               onPress={() => setModalVisible(false)}
+              activeOpacity={0.85}
             >
               <Text style={styles.closeText}>Close</Text>
             </TouchableOpacity>
@@ -178,71 +168,126 @@ export default function HoroscopeScreen() {
       </Modal>
 
       {/* Bottom CTA */}
-      <TouchableOpacity
-        style={styles.bottomBtn}
-        onPress={() => router.push("/dashboard/(tabs)/chat")}
-      >
-        <Ionicons name="chatbubble" size={20} color="#2d1e3f" />
-        <Text style={styles.bottomText}>Chat with Astrologer</Text>
-      </TouchableOpacity>
+      <View style={styles.footer}>
+        <TouchableOpacity
+          style={styles.bottomBtn}
+          onPress={() => router.push("/dashboard/(tabs)/chat")}
+          activeOpacity={0.85}
+        >
+          <Ionicons name="chatbubble" size={18} color="#fff" />
+          <Text style={styles.bottomText}>Chat with Astrologer</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
+  container: { flex: 1, backgroundColor: "#f7f5f0" },
 
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    padding: 16,
-    paddingTop: 40,
     backgroundColor: "#2d1e3f",
-  },
-  headerTitle: {
-    color: "#e0c878",
-    fontSize: 18,
-    fontWeight: "700",
+    paddingTop: 50,
+    padding: 20,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
   },
 
-  zodiacRow: { paddingHorizontal: 16, paddingVertical: 12 },
-  zodiacItem: { alignItems: "center", marginRight: 16 },
-  zodiacIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "#f5f5f5",
+  headerIconBtn: {
+    backgroundColor: "#e0c878",
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     alignItems: "center",
     justifyContent: "center",
   },
-  zodiacIconActive: { backgroundColor: "#e0c878" },
-  zodiacText: { marginTop: 4, fontSize: 12, color: "#666" },
-  zodiacTextActive: { color: "#2d1e3f", fontWeight: "600" },
+
+  headerTitle: {
+    color: "#fdf6ec",
+    fontSize: 17,
+    fontWeight: "700",
+  },
+
+  zodiacRow: { paddingHorizontal: 16, paddingVertical: 20 },
+
+  zodiacItem: { alignItems: "center", marginRight: 16, width: 60 },
+
+  zodiacIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: 18,
+    backgroundColor: "#fff",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#eee0bd",
+  },
+
+  zodiacIconActive: {
+    backgroundColor: "#2d1e3f",
+    borderColor: "#2d1e3f",
+  },
+
+  zodiacText: {
+    marginTop: 6,
+    fontSize: 11,
+    color: "#8a7f6a",
+    textAlign: "center",
+  },
+
+  zodiacTextActive: { color: "#2d1e3f", fontWeight: "700" },
 
   summaryCard: {
-    backgroundColor: "#2d1e3f",
+    backgroundColor: "#fff",
     marginHorizontal: 16,
     padding: 20,
-    borderRadius: 18,
-    marginBottom: 100,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#eee0bd",
   },
-  summaryDate: {
-    textAlign: "center",
-    color: "#fff",
-    marginBottom: 6,
+
+  summaryHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
+
   summaryTitle: {
-    textAlign: "center",
-    color: "#e0c878",
-    fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 12,
+    fontSize: 17,
+    fontWeight: "700",
+    color: "#2d1e3f",
   },
+
+  summaryDate: {
+    fontSize: 12,
+    color: "#a89f8c",
+    marginTop: 2,
+  },
+
+  zodiacBadge: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: "#f7f5f0",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#eee0bd",
+  },
+
+  divider: {
+    height: 1,
+    backgroundColor: "#f2efe8",
+    marginVertical: 14,
+  },
+
   horoscopeText: {
-    color: "#fff",
-    textAlign: "center",
-    lineHeight: 22,
+    color: "#5c5347",
+    lineHeight: 21,
+    fontSize: 13.5,
   },
 
   modalOverlay: {
@@ -251,51 +296,72 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+
   modalContainer: {
     width: "85%",
     backgroundColor: "#fff",
-    borderRadius: 16,
+    borderRadius: 20,
     padding: 20,
     maxHeight: "70%",
   },
+
   modalTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: "700",
     marginBottom: 12,
     textAlign: "center",
     color: "#2d1e3f",
   },
-  dateRow: { marginBottom: 10 },
-  dateSign: { fontWeight: "600", color: "#2d1e3f" },
-  dateRange: { color: "#555" },
+
+  dateRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f2efe8",
+  },
+
+  dateSign: { fontWeight: "700", color: "#2d1e3f", fontSize: 13 },
+  dateRange: { color: "#8a7f6a", fontSize: 12 },
 
   closeBtn: {
-    marginTop: 15,
-    backgroundColor: "#e0c878",
-    padding: 10,
-    borderRadius: 8,
+    marginTop: 16,
+    backgroundColor: "#2d1e3f",
+    padding: 13,
+    borderRadius: 24,
     alignItems: "center",
   },
+
   closeText: {
-    fontWeight: "600",
-    color: "#2d1e3f",
+    fontWeight: "700",
+    color: "#e0c878",
   },
 
-  bottomBtn: {
+  footer: {
     position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
+    padding: 16,
+    paddingBottom: 28,
+    backgroundColor: "#f7f5f0",
+    borderTopWidth: 1,
+    borderTopColor: "#eee0bd",
+  },
+
+  bottomBtn: {
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#e0c878",
-    padding: 16,
-    paddingBottom: 32,
+    backgroundColor: "#e0672c",
+    borderRadius: 24,
+    paddingVertical: 15,
+    gap: 8,
   },
+
   bottomText: {
-    marginLeft: 8,
-    fontWeight: "600",
-    color: "#2d1e3f",
+    fontWeight: "700",
+    color: "#fff",
+    fontSize: 15,
   },
 });

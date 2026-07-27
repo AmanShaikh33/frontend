@@ -14,6 +14,7 @@ import { apiGetAstrologerById } from "../../api/api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const BASE_URL = "https://astro-backend-qdu5.onrender.com";
+const BIO_PREVIEW_LENGTH = 110;
 
 export default function AstrologerDetails() {
   const { astrologerId } = useLocalSearchParams();
@@ -21,31 +22,29 @@ export default function AstrologerDetails() {
 
   const [astro, setAstro] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [bioExpanded, setBioExpanded] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
 
- useEffect(() => {
-  const fetchDetails = async () => {
-    try {
-      const token = await AsyncStorage.getItem("token");
-      if (!token) {
-        router.replace("/login");
-        return;
+  useEffect(() => {
+    const fetchDetails = async () => {
+      try {
+        const token = await AsyncStorage.getItem("token");
+        if (!token) {
+          router.replace("/login");
+          return;
+        }
+
+        const data = await apiGetAstrologerById(token, astrologerId as string);
+        setAstro(data);
+      } catch (err) {
+        console.log("Failed to fetch astrologer:", err);
+      } finally {
+        setLoading(false);
       }
+    };
 
-      const data = await apiGetAstrologerById(
-        token,
-        astrologerId as string
-      );
-
-      setAstro(data);
-    } catch (err) {
-      console.log("Failed to fetch astrologer:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  fetchDetails();
-}, []);
+    fetchDetails();
+  }, []);
 
   if (loading) {
     return (
@@ -63,94 +62,168 @@ export default function AstrologerDetails() {
     );
   }
 
-  const imageUrl = astro.profilePic
-    ? `${BASE_URL}${astro.profilePic}`
-    : null;
+  const imageUrl = astro.profilePic ? `${BASE_URL}${astro.profilePic}` : null;
+  const isOnline = astro.availability === "online";
+
+  const skillsList: string[] = Array.isArray(astro.skills)
+    ? astro.skills
+    : astro.skills
+    ? String(astro.skills).split(",").map((s: string) => s.trim())
+    : [];
+
+  const languagesText = Array.isArray(astro.languages)
+    ? astro.languages.join(" • ")
+    : astro.languages || "—";
+
+  const bio: string = astro.bio || "No bio available.";
+  const isLongBio = bio.length > BIO_PREVIEW_LENGTH;
+  const displayedBio =
+    isLongBio && !bioExpanded ? `${bio.slice(0, BIO_PREVIEW_LENGTH)}...` : bio;
+
+  const rating = astro.rating ?? "4.9";
+  const reviewCount = astro.reviewCount ?? 0;
 
   return (
     <View style={styles.container}>
-      <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color="#e0c878" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Astrologer Details</Text>
-        </View>
-
-        {/* Profile Image */}
-        <View style={styles.profileBox}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+        {/* Photo header */}
+        <View style={styles.photoWrap}>
           {imageUrl ? (
-            <Image source={{ uri: imageUrl }} style={styles.avatar} />
+            <Image source={{ uri: imageUrl }} style={styles.photo} />
           ) : (
-            <View style={styles.avatarFallback}>
-              <Ionicons name="person" size={60} color="#2d1e3f" />
+            <View style={styles.photoFallback}>
+              <Ionicons name="person" size={70} color="#2d1e3f" />
             </View>
           )}
 
-          <Text style={styles.name}>{astro.name}</Text>
+          <View style={styles.topOverlayRow}>
+            <TouchableOpacity
+              style={styles.overlayCircleBtn}
+              onPress={() => router.back()}
+              hitSlop={10}
+            >
+              <Ionicons name="chevron-back" size={20} color="#fff" />
+            </TouchableOpacity>
 
-          <Text
-            style={[
-              styles.status,
-              astro.availability === "online"
-                ? styles.online
-                : styles.offline,
-            ]}
-          >
-            {astro.availability === "online" ? "● Online" : "● Offline"}
-          </Text>
+            <View style={styles.topRightIcons}>
+              <TouchableOpacity
+                style={styles.overlayCircleBtn}
+                onPress={() => setIsFavorite((prev) => !prev)}
+                hitSlop={10}
+              >
+                <Ionicons
+                  name={isFavorite ? "heart" : "heart-outline"}
+                  size={18}
+                  color={isFavorite ? "#e0672c" : "#fff"}
+                />
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.overlayCircleBtn} hitSlop={10}>
+                <Ionicons name="share-social-outline" size={18} color="#fff" />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <View style={styles.onlineBadge}>
+            <View
+              style={[
+                styles.onlineDot,
+                { backgroundColor: isOnline ? "#22c55e" : "#9ca3af" },
+              ]}
+            />
+            <Text style={styles.onlineBadgeText}>
+              {isOnline ? "Online" : "Offline"}
+            </Text>
+          </View>
         </View>
 
-        {/* Info Section */}
+        {/* Overlapping info card */}
         <View style={styles.card}>
+          <View style={styles.nameRow}>
+            <Text style={styles.name}>{astro.name}</Text>
+            <Ionicons name="checkmark-circle" size={18} color="#3b82f6" style={{ marginLeft: 6 }} />
+          </View>
+
+          {skillsList.length > 0 && (
+            <Text style={styles.category} numberOfLines={1}>
+              {skillsList.join(" • ")}
+            </Text>
+          )}
+
+          <View style={styles.metaRow}>
+            <Ionicons name="star" size={14} color="#f5b400" />
+            <Text style={styles.metaText}>
+              {rating} <Text style={styles.metaDim}>({reviewCount} Reviews)</Text>
+            </Text>
+            <Text style={styles.metaDim}>  •  {astro.experience}+ Years Exp.</Text>
+          </View>
+
+          <View style={styles.priceRow}>
+            <Text style={styles.price}>₹ {astro.pricePerMinute}/min</Text>
+
+            <TouchableOpacity
+              style={[styles.talkBtn, !isOnline && styles.talkBtnDisabled]}
+              disabled={!isOnline}
+              activeOpacity={0.85}
+              onPress={() =>
+                router.push({
+                  pathname: "/dashboard/chatpage",
+                  params: { astrologerId: astro._id },
+                })
+              }
+            >
+              <Text
+                style={[
+                  styles.talkBtnText,
+                  !isOnline && styles.talkBtnTextDisabled,
+                ]}
+              >
+                {isOnline ? "Talk to her" : "Offline"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.divider} />
+
+          {/* About */}
           <Text style={styles.sectionTitle}>About</Text>
-          <Text style={styles.text}>{astro.bio || "No bio available."}</Text>
+          <Text style={styles.text}>{displayedBio}</Text>
+          {isLongBio && (
+            <TouchableOpacity onPress={() => setBioExpanded((prev) => !prev)}>
+              <Text style={styles.readMore}>
+                {bioExpanded ? "Show less" : "Read more"}
+              </Text>
+            </TouchableOpacity>
+          )}
 
-          <Text style={styles.sectionTitle}>Skills</Text>
-          <Text style={styles.text}>
-            {Array.isArray(astro.skills)
-              ? astro.skills.join(", ")
-              : astro.skills}
-          </Text>
+          {/* Specialties */}
+          {skillsList.length > 0 && (
+            <>
+              <Text style={styles.sectionTitle}>Specialties</Text>
+              <View style={styles.chipRow}>
+                {skillsList.map((skill, idx) => (
+                  <View key={idx} style={styles.chip}>
+                    <Text style={styles.chipText}>{skill}</Text>
+                  </View>
+                ))}
+              </View>
+            </>
+          )}
 
+          {/* Languages */}
           <Text style={styles.sectionTitle}>Languages</Text>
-          <Text style={styles.text}>
-            {Array.isArray(astro.languages)
-              ? astro.languages.join(", ")
-              : astro.languages}
-          </Text>
+          <Text style={styles.text}>{languagesText}</Text>
 
-          <Text style={styles.sectionTitle}>Experience</Text>
-          <Text style={styles.text}>{astro.experience} years</Text>
-
-          <Text style={styles.sectionTitle}>Price</Text>
-          <Text style={styles.price}>
-            ₹ {astro.pricePerMinute} / minute
-          </Text>
+          {/* Reviews */}
+          <TouchableOpacity style={styles.reviewsRow} activeOpacity={0.7}>
+            <View style={styles.reviewsLeft}>
+              <Text style={styles.reviewsTitle}>Reviews ({reviewCount})</Text>
+              <Ionicons name="chevron-forward" size={16} color="#2d1e3f" />
+            </View>
+            <Text style={styles.seeAll}>See all</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
-
-      {/* Bottom Fixed Chat Button */}
-      <TouchableOpacity
-        style={[
-          styles.chatBtn,
-          astro.availability !== "online" && styles.chatDisabled,
-        ]}
-        disabled={astro.availability !== "online"}
-        onPress={() =>
-          router.push({
-            pathname: "/dashboard/chatpage",
-            params: { astrologerId: astro._id },
-          })
-        }
-      >
-        <Text style={styles.chatText}>
-          {astro.availability === "online"
-            ? "Start Chat"
-            : "Currently Offline"}
-        </Text>
-      </TouchableOpacity>
     </View>
   );
 }
@@ -167,108 +240,227 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 16,
-    paddingTop: 40,
+  photoWrap: {
+    width: "100%",
+    height: 340,
     backgroundColor: "#2d1e3f",
   },
 
-  headerTitle: {
-    marginLeft: 20,
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#e0c878",
+  photo: {
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover",
   },
 
-  profileBox: {
-    alignItems: "center",
-    marginTop: 20,
-  },
-
-  avatar: {
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    borderWidth: 4,
-    borderColor: "#e0c878",
-  },
-
-  avatarFallback: {
-    width: 140,
-    height: 140,
-    borderRadius: 70,
+  photoFallback: {
+    width: "100%",
+    height: "100%",
     backgroundColor: "#f3f4f6",
+    alignItems: "center",
     justifyContent: "center",
+  },
+
+  topOverlayRow: {
+    position: "absolute",
+    top: 44,
+    left: 16,
+    right: 16,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+
+  topRightIcons: {
+    flexDirection: "row",
+    gap: 10,
+  },
+
+  overlayCircleBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: "rgba(0,0,0,0.35)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  onlineBadge: {
+    position: "absolute",
+    bottom: 16,
+    left: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.45)",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
+    gap: 6,
+  },
+
+  onlineDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+  },
+
+  onlineBadgeText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+
+  card: {
+    backgroundColor: "#fff",
+    marginTop: -24,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingHorizontal: 20,
+    paddingTop: 22,
+  },
+
+  nameRow: {
+    flexDirection: "row",
     alignItems: "center",
   },
 
   name: {
-    fontSize: 22,
-    fontWeight: "bold",
-    marginTop: 10,
-    color: "#2d1e3f",
-  },
-
-  status: {
-    marginTop: 6,
-    fontWeight: "600",
-  },
-
-  online: {
-    color: "#22c55e",
-  },
-
-  offline: {
-    color: "#ef4444",
-  },
-
-  card: {
-    margin: 20,
-    padding: 20,
-    backgroundColor: "#f9fafb",
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#e5e7eb",
-  },
-
-  sectionTitle: {
+    fontSize: 21,
     fontWeight: "700",
-    marginTop: 12,
     color: "#2d1e3f",
   },
 
-  text: {
+  category: {
+    fontSize: 13,
+    color: "#6b7280",
     marginTop: 4,
-    color: "#4b5563",
+  },
+
+  metaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 10,
+    gap: 4,
+  },
+
+  metaText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#2d1e3f",
+  },
+
+  metaDim: {
+    fontSize: 13,
+    fontWeight: "400",
+    color: "#9ca3af",
+  },
+
+  priceRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 16,
   },
 
   price: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#e0c878",
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#e0672c",
+  },
+
+  talkBtn: {
+    borderWidth: 1.5,
+    borderColor: "#2d1e3f",
+    borderRadius: 22,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+  },
+
+  talkBtnDisabled: {
+    borderColor: "#d1d5db",
+  },
+
+  talkBtnText: {
+    color: "#2d1e3f",
+    fontWeight: "700",
+    fontSize: 14,
+  },
+
+  talkBtnTextDisabled: {
+    color: "#9ca3af",
+  },
+
+  divider: {
+    height: 1,
+    backgroundColor: "#f2efe8",
+    marginVertical: 18,
+  },
+
+  sectionTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#2d1e3f",
+    marginTop: 18,
+  },
+
+  text: {
+    marginTop: 6,
+    color: "#6b7280",
+    fontSize: 13,
+    lineHeight: 19,
+  },
+
+  readMore: {
     marginTop: 4,
+    color: "#e0672c",
+    fontWeight: "700",
+    fontSize: 13,
   },
 
-  chatBtn: {
-    position: "absolute",
-    bottom: 20,
-    left: 20,
-    right: 20,
-    backgroundColor: "#2d1e3f",
-    padding: 16,
-    borderRadius: 14,
+  chipRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 10,
+  },
+
+  chip: {
+    backgroundColor: "#f7f5f0",
+    borderWidth: 1,
+    borderColor: "#eee0bd",
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+
+  chipText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#2d1e3f",
+  },
+
+  reviewsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
+    marginTop: 22,
+    marginBottom: 24,
   },
 
-  chatDisabled: {
-    backgroundColor: "#d1d5db",
+  reviewsLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
   },
 
-  chatText: {
-    color: "#e0c878",
-    fontWeight: "bold",
-    fontSize: 16,
+  reviewsTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#2d1e3f",
+  },
+
+  seeAll: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#e0672c",
   },
 });

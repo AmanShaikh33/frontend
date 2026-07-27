@@ -52,129 +52,122 @@ export default function FreeKundliScreen() {
     });
   };
 
+  const isFormValid = name.trim().length > 0 && birthPlace.trim().length > 0;
+
   return (
     <View style={styles.container}>
       {/* HEADER */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="#e0c878" />
+        <TouchableOpacity onPress={() => router.back()} hitSlop={10} style={styles.backBtn}>
+          <Ionicons name="arrow-back" size={20} color="#2d1e3f" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Free Kundli</Text>
+        <View style={{ width: 34 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Name */}
-        <Text style={styles.label}>Enter Name</Text>
-        <View style={styles.inputContainer}>
-          <Ionicons name="person-outline" size={18} color="#604f70" />
-          <TextInput
-            placeholder="Your Name"
-            placeholderTextColor="#9e8b4e"
-            value={name}
-            onChangeText={setName}
-            style={styles.input}
-          />
-        </View>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <Text style={styles.introText}>
+          Enter your birth details to generate an accurate, personalized Kundli.
+        </Text>
 
-        {/* Gender */}
-        <Text style={styles.label}>Select Gender</Text>
-        <View style={styles.genderRow}>
-          {["male", "female", "other"].map((g) => (
-            <TouchableOpacity
-              key={g}
-              style={[
-                styles.genderBtn,
-                gender === g && styles.genderBtnActive,
-              ]}
-              onPress={() => setGender(g)}
-            >
-              <Ionicons
-                name={
-                  g === "male"
-                    ? "male"
-                    : g === "female"
-                    ? "female"
-                    : "person"
-                }
-                size={24}
-                color={gender === g ? "#2d1e3f" : "#604f70"}
-              />
-              <Text
-                style={[
-                  styles.genderText,
-                  gender === g && styles.genderTextActive,
-                ]}
+        <View style={styles.card}>
+          {/* Name */}
+          <Text style={styles.label}>Enter Name</Text>
+          <View style={styles.inputContainer}>
+            <Ionicons name="person-outline" size={18} color="#8a7f6a" />
+            <TextInput
+              placeholder="Your Name"
+              placeholderTextColor="#a89f8c"
+              value={name}
+              onChangeText={setName}
+              style={styles.input}
+            />
+          </View>
+
+          {/* Gender */}
+          <Text style={styles.label}>Select Gender</Text>
+          <View style={styles.genderRow}>
+            {["male", "female", "other"].map((g) => (
+              <TouchableOpacity
+                key={g}
+                style={[styles.genderBtn, gender === g && styles.genderBtnActive]}
+                onPress={() => setGender(g)}
+                activeOpacity={0.85}
               >
-                {g.charAt(0).toUpperCase() + g.slice(1)}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+                <Ionicons
+                  name={g === "male" ? "male" : g === "female" ? "female" : "person"}
+                  size={22}
+                  color={gender === g ? "#e0c878" : "#8a7f6a"}
+                />
+                <Text style={[styles.genderText, gender === g && styles.genderTextActive]}>
+                  {g.charAt(0).toUpperCase() + g.slice(1)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
 
-        {/* Birth Date */}
-        <Text style={styles.label}>Birth Date</Text>
-        <TouchableOpacity
-          onPress={() => showPicker("date")}
-          style={styles.inputContainer}
-        >
-          <Ionicons name="calendar-outline" size={18} color="#604f70" />
-          <Text style={styles.dateText}>
-            {birthDate.toDateString()}
-          </Text>
-        </TouchableOpacity>
+          {/* Birth Date */}
+          <Text style={styles.label}>Birth Date</Text>
+          <TouchableOpacity onPress={() => showPicker("date")} style={styles.inputContainer} activeOpacity={0.85}>
+            <Ionicons name="calendar-outline" size={18} color="#8a7f6a" />
+            <Text style={styles.dateText}>{birthDate.toDateString()}</Text>
+          </TouchableOpacity>
 
-        {/* Birth Time */}
-        {!unknownTime && (
-          <>
-            <Text style={styles.label}>Birth Time</Text>
-            <TouchableOpacity
-              onPress={() => showPicker("time")}
-              style={styles.inputContainer}
-            >
-              <Ionicons name="time-outline" size={18} color="#604f70" />
-              <Text style={styles.dateText}>
-                {birthTime.toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </Text>
-            </TouchableOpacity>
-          </>
-        )}
+          {/* Birth Time */}
+          {!unknownTime && (
+            <>
+              <Text style={styles.label}>Birth Time</Text>
+              <TouchableOpacity onPress={() => showPicker("time")} style={styles.inputContainer} activeOpacity={0.85}>
+                <Ionicons name="time-outline" size={18} color="#8a7f6a" />
+                <Text style={styles.dateText}>
+                  {birthTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                </Text>
+              </TouchableOpacity>
+            </>
+          )}
 
-        {/* Unknown Time */}
-        <View style={styles.checkboxRow}>
-          <Checkbox
-            value={unknownTime}
-            onValueChange={setUnknownTime}
-            color={unknownTime ? "#e0c878" : undefined}
-          />
-          <Text style={styles.checkboxText}>
-            I don’t know my birth time
-          </Text>
-        </View>
+          {/* Unknown Time */}
+          <TouchableOpacity
+            style={styles.checkboxRow}
+            onPress={() => setUnknownTime(!unknownTime)}
+            activeOpacity={0.85}
+          >
+            <Checkbox
+              value={unknownTime}
+              onValueChange={setUnknownTime}
+              color={unknownTime ? "#e0672c" : undefined}
+            />
+            <Text style={styles.checkboxText}>I don't know my birth time</Text>
+          </TouchableOpacity>
 
-        {/* Birth Place */}
-        <Text style={styles.label}>Place of Birth</Text>
-        <View style={styles.inputContainer}>
-          <Ionicons name="location-outline" size={18} color="#604f70" />
-          <TextInput
-            placeholder="City, Country"
-            placeholderTextColor="#9e8b4e"
-            value={birthPlace}
-            onChangeText={setBirthPlace}
-            style={styles.input}
-          />
+          {/* Birth Place */}
+          <Text style={styles.label}>Place of Birth</Text>
+          <View style={styles.inputContainer}>
+            <Ionicons name="location-outline" size={18} color="#8a7f6a" />
+            <TextInput
+              placeholder="City, Country"
+              placeholderTextColor="#a89f8c"
+              value={birthPlace}
+              onChangeText={setBirthPlace}
+              style={styles.input}
+            />
+          </View>
         </View>
       </ScrollView>
 
-      {/* Submit Button */}
-      <TouchableOpacity
-        onPress={handleSubmit}
-        style={styles.submitBtn}
-      >
-        <Text style={styles.submitText}>Generate Kundli</Text>
-      </TouchableOpacity>
+      {/* Footer CTA */}
+      <View style={styles.footer}>
+        <TouchableOpacity
+          onPress={handleSubmit}
+          style={[styles.submitBtn, !isFormValid && styles.submitBtnDisabled]}
+          disabled={!isFormValid}
+          activeOpacity={0.85}
+        >
+          <Text style={[styles.submitText, !isFormValid && styles.submitTextDisabled]}>
+            Generate Kundli
+          </Text>
+        </TouchableOpacity>
+      </View>
 
       {/* DateTime Picker */}
       <DateTimePickerModal
@@ -190,116 +183,161 @@ export default function FreeKundliScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: "#f7f5f0",
   },
 
   header: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 16,
-    paddingTop: 40,
+    justifyContent: "space-between",
     backgroundColor: "#2d1e3f",
+    paddingTop: 50,
+    padding: 20,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+  },
+
+  backBtn: {
+    backgroundColor: "#e0c878",
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: "center",
+    justifyContent: "center",
   },
 
   headerTitle: {
-    flex: 1,
-    textAlign: "center",
-    color: "#e0c878",
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: "700",
-    marginRight: 24,
+    color: "#fdf6ec",
   },
 
   scrollContent: {
     padding: 16,
-    paddingBottom: 120,
+    paddingBottom: 140,
+  },
+
+  introText: {
+    color: "#8a7f6a",
+    fontSize: 13,
+    marginBottom: 16,
+    lineHeight: 19,
+  },
+
+  card: {
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#eee0bd",
+    padding: 18,
   },
 
   label: {
     color: "#2d1e3f",
     marginBottom: 6,
     fontWeight: "600",
+    fontSize: 13,
   },
 
   inputContainer: {
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#e0c878",
-    borderRadius: 10,
+    borderColor: "#eee0bd",
+    borderRadius: 14,
     paddingHorizontal: 12,
     paddingVertical: 12,
-    marginBottom: 20,
-    backgroundColor: "#fff",
+    marginBottom: 18,
+    backgroundColor: "#f7f5f0",
   },
 
   input: {
     flex: 1,
     marginLeft: 8,
-    color: "#000",
+    color: "#2d1e3f",
   },
 
   dateText: {
     marginLeft: 8,
-    color: "#000",
+    color: "#2d1e3f",
   },
 
   genderRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 20,
+    marginBottom: 18,
+    gap: 8,
   },
 
   genderBtn: {
     flex: 1,
     alignItems: "center",
     paddingVertical: 14,
-    marginHorizontal: 4,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#e0c878",
-    backgroundColor: "#fff",
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: "#eee0bd",
+    backgroundColor: "#f7f5f0",
   },
 
   genderBtnActive: {
-    backgroundColor: "#e0c878",
+    backgroundColor: "#2d1e3f",
+    borderColor: "#2d1e3f",
   },
 
   genderText: {
     marginTop: 6,
     fontWeight: "600",
-    color: "#604f70",
+    color: "#8a7f6a",
+    fontSize: 12,
   },
 
   genderTextActive: {
-    color: "#2d1e3f",
+    color: "#e0c878",
   },
 
   checkboxRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 20,
+    marginBottom: 18,
   },
 
   checkboxText: {
     marginLeft: 8,
-    color: "#555",
+    color: "#5c5347",
+    fontSize: 13,
   },
 
-  submitBtn: {
+  footer: {
     position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: "#e0c878",
-    padding: 18,
-    paddingBottom: 32,
+    padding: 16,
+    paddingBottom: 28,
+    backgroundColor: "#f7f5f0",
+    borderTopWidth: 1,
+    borderTopColor: "#eee0bd",
+  },
+
+  submitBtn: {
+    backgroundColor: "#e0672c",
+    borderRadius: 24,
+    paddingVertical: 16,
+    alignItems: "center",
+  },
+
+  submitBtnDisabled: {
+    backgroundColor: "#d8cdb8",
   },
 
   submitText: {
     textAlign: "center",
     fontWeight: "700",
-    color: "#2d1e3f",
+    color: "#fff",
     fontSize: 16,
+  },
+
+  submitTextDisabled: {
+    color: "#fff",
   },
 });

@@ -131,12 +131,13 @@ function DobPickerModal({
           </View>
 
           <View style={styles.modalButtonRow}>
-            <TouchableOpacity style={styles.modalCancelBtn} onPress={onCancel}>
+            <TouchableOpacity style={styles.modalCancelBtn} onPress={onCancel} activeOpacity={0.85}>
               <Text style={styles.modalCancelText}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.modalConfirmBtn}
               onPress={() => onConfirm(new Date(year, month, validDay))}
+              activeOpacity={0.85}
             >
               <Text style={styles.modalConfirmText}>Confirm</Text>
             </TouchableOpacity>
@@ -279,12 +280,12 @@ export default function MatchKundliScreen() {
 
       <Text style={styles.label}>Name</Text>
       <View style={styles.inputRow}>
-        <Ionicons name="person-outline" size={18} color="#a3915a" />
+        <Ionicons name="person-outline" size={18} color="#8a7f6a" />
         <TextInput
           value={name}
           onChangeText={setName}
           placeholder="Enter name"
-          placeholderTextColor="#b7a56a"
+          placeholderTextColor="#a89f8c"
           style={styles.input}
         />
       </View>
@@ -292,16 +293,16 @@ export default function MatchKundliScreen() {
       <View style={styles.rowSplit}>
         <View style={styles.halfField}>
           <Text style={styles.label}>Birth Date</Text>
-          <TouchableOpacity style={styles.pickerRow} onPress={onPressDob}>
-            <Ionicons name="calendar-outline" size={18} color="#a3915a" />
+          <TouchableOpacity style={styles.pickerRow} onPress={onPressDob} activeOpacity={0.85}>
+            <Ionicons name="calendar-outline" size={18} color="#8a7f6a" />
             <Text style={styles.pickerText}>{formatDateDisplay(dob)}</Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.halfField}>
           <Text style={styles.label}>Birth Time</Text>
-          <TouchableOpacity style={styles.pickerRow} onPress={onPressTime}>
-            <Ionicons name="time-outline" size={18} color="#a3915a" />
+          <TouchableOpacity style={styles.pickerRow} onPress={onPressTime} activeOpacity={0.85}>
+            <Ionicons name="time-outline" size={18} color="#8a7f6a" />
             <Text style={styles.pickerText}>
               {time.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
             </Text>
@@ -313,7 +314,7 @@ export default function MatchKundliScreen() {
         <Switch
           value={unknownTime}
           onValueChange={setUnknownTime}
-          trackColor={{ false: "#ddd", true: "#e0c878" }}
+          trackColor={{ false: "#eee0bd", true: "#2d1e3f" }}
           thumbColor="#fff"
         />
         <Text style={styles.switchText}>Don&apos;t know exact time of birth</Text>
@@ -322,12 +323,12 @@ export default function MatchKundliScreen() {
 
       <Text style={styles.label}>Birth Place</Text>
       <View style={styles.inputRow}>
-        <Ionicons name="location-outline" size={18} color="#a3915a" />
+        <Ionicons name="location-outline" size={18} color="#8a7f6a" />
         <TextInput
           value={place}
           onChangeText={setPlace}
           placeholder="e.g. Pune, India"
-          placeholderTextColor="#b7a56a"
+          placeholderTextColor="#a89f8c"
           style={styles.input}
         />
       </View>
@@ -337,19 +338,18 @@ export default function MatchKundliScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={12}>
-          <Ionicons name="arrow-back" size={24} color="#e0c878" />
+        <TouchableOpacity onPress={() => router.back()} hitSlop={10} style={styles.backBtn}>
+          <Ionicons name="arrow-back" size={20} color="#2d1e3f" />
         </TouchableOpacity>
-        <View style={{ flex: 1 }}>
+        <View style={{ flex: 1, marginLeft: 12 }}>
           <Text style={styles.headerTitle}>Kundli Matching</Text>
           <Text style={styles.headerSubtitle}>Vedic compatibility check</Text>
         </View>
-        <View style={{ width: 24 }} />
       </View>
 
       <View style={styles.tabWrapper}>
         <View style={styles.tabActive}>
-          <Ionicons name="sparkles-outline" size={16} color="#2d1e3f" />
+          <Ionicons name="sparkles-outline" size={16} color="#e0c878" />
           <Text style={styles.tabText}>New Matching</Text>
         </View>
       </View>
@@ -413,21 +413,23 @@ export default function MatchKundliScreen() {
         <View style={{ height: 110 }} />
       </ScrollView>
 
-      <TouchableOpacity
-        style={[styles.submitBtn, isMatching && { opacity: 0.7 }]}
-        onPress={handleMatchHoroscope}
-        disabled={isMatching}
-        activeOpacity={0.85}
-      >
-        {isMatching ? (
-          <ActivityIndicator color="#2d1e3f" />
-        ) : (
-          <>
-            <Ionicons name="heart" size={18} color="#2d1e3f" style={{ marginRight: 8 }} />
-            <Text style={styles.submitText}>Match Horoscope</Text>
-          </>
-        )}
-      </TouchableOpacity>
+      <View style={styles.footer}>
+        <TouchableOpacity
+          style={[styles.submitBtn, isMatching && { opacity: 0.7 }]}
+          onPress={handleMatchHoroscope}
+          disabled={isMatching}
+          activeOpacity={0.85}
+        >
+          {isMatching ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <>
+              <Ionicons name="heart" size={18} color="#fff" style={{ marginRight: 8 }} />
+              <Text style={styles.submitText}>Match Horoscope</Text>
+            </>
+          )}
+        </TouchableOpacity>
+      </View>
 
       <DateTimePickerModal
         isVisible={isTimePickerVisible}
@@ -448,83 +450,164 @@ export default function MatchKundliScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f7f5f0" },
+
   header: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 16,
-    paddingTop: 44,
-    paddingBottom: 18,
     backgroundColor: "#2d1e3f",
-    gap: 12,
+    paddingTop: 50,
+    padding: 20,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
   },
-  headerTitle: { textAlign: "center", color: "#e0c878", fontSize: 18, fontWeight: "700" },
-  headerSubtitle: { textAlign: "center", color: "#b7a9c9", fontSize: 12, marginTop: 2 },
+
+  backBtn: {
+    backgroundColor: "#e0c878",
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  headerTitle: { color: "#fdf6ec", fontSize: 17, fontWeight: "700" },
+  headerSubtitle: { color: "#b7a9c9", fontSize: 12, marginTop: 2 },
+
   tabWrapper: {
-    margin: 16, marginBottom: 8, backgroundColor: "#fff", borderRadius: 14,
-    overflow: "hidden", borderWidth: 1, borderColor: "#eee",
+    margin: 16,
+    marginBottom: 4,
+    backgroundColor: "#fff",
+    borderRadius: 14,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "#eee0bd",
   },
   tabActive: {
-    flexDirection: "row", justifyContent: "center", alignItems: "center",
-    gap: 6, paddingVertical: 12, backgroundColor: "#e0c878",
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 12,
+    backgroundColor: "#2d1e3f",
   },
-  tabText: { fontWeight: "700", color: "#2d1e3f" },
-  content: { paddingHorizontal: 16, paddingTop: 8 },
+  tabText: { fontWeight: "700", color: "#e0c878" },
+
+  content: { paddingHorizontal: 16, paddingTop: 12 },
+
   card: {
-    backgroundColor: "#fff", borderRadius: 18, padding: 18, marginBottom: 16,
-    borderWidth: 1, borderColor: "#f0ebe0", shadowColor: "#2d1e3f",
-    shadowOpacity: 0.06, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 2,
+    backgroundColor: "#fff",
+    borderRadius: 18,
+    padding: 18,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "#eee0bd",
   },
+
   cardHeaderRow: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 16 },
   cardIconBadge: {
-    width: 34, height: 34, borderRadius: 10, backgroundColor: "#f3e8c9",
-    alignItems: "center", justifyContent: "center",
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: "#f7f5f0",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#eee0bd",
   },
   cardTitle: { fontSize: 17, fontWeight: "700", color: "#2d1e3f" },
+
   label: { color: "#8a7f6a", marginBottom: 6, fontSize: 12, fontWeight: "600", letterSpacing: 0.3 },
+
   inputRow: {
-    flexDirection: "row", alignItems: "center", borderWidth: 1.2, borderColor: "#eee0bd",
-    backgroundColor: "#fffdf7", borderRadius: 12, paddingHorizontal: 12, marginBottom: 14, gap: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#eee0bd",
+    backgroundColor: "#f7f5f0",
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    marginBottom: 14,
+    gap: 8,
   },
   input: { flex: 1, paddingVertical: 10, color: "#2d1e3f" },
+
   rowSplit: { flexDirection: "row", gap: 12 },
   halfField: { flex: 1 },
+
   pickerRow: {
-    flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1.2,
-    borderColor: "#eee0bd", backgroundColor: "#fffdf7", borderRadius: 12, padding: 12, marginBottom: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    borderWidth: 1,
+    borderColor: "#eee0bd",
+    backgroundColor: "#f7f5f0",
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 14,
   },
   pickerText: { color: "#2d1e3f", fontWeight: "500" },
+
   switchRow: { flexDirection: "row", alignItems: "center", marginTop: 2, marginBottom: 4, gap: 8 },
   switchText: { color: "#5c5347", fontSize: 13 },
   note: { fontSize: 11, color: "#a89f8c", marginBottom: 14, marginLeft: 2 },
-  submitBtn: {
-    position: "absolute", bottom: 0, left: 0, right: 0, flexDirection: "row",
-    padding: 18, paddingBottom: 34, backgroundColor: "#e0c878", alignItems: "center",
-    justifyContent: "center", borderTopLeftRadius: 20, borderTopRightRadius: 20,
-    shadowColor: "#2d1e3f", shadowOpacity: 0.15, shadowRadius: 12,
-    shadowOffset: { width: 0, height: -4 }, elevation: 8,
+
+  footer: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 16,
+    paddingBottom: 28,
+    backgroundColor: "#f7f5f0",
+    borderTopWidth: 1,
+    borderTopColor: "#eee0bd",
   },
-  submitText: { fontSize: 17, fontWeight: "700", color: "#2d1e3f" },
+
+  submitBtn: {
+    flexDirection: "row",
+    backgroundColor: "#e0672c",
+    borderRadius: 24,
+    paddingVertical: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  submitText: { fontSize: 15, fontWeight: "700", color: "#fff" },
+
   resultCard: { alignItems: "center" },
   scoreCircleWrap: { marginVertical: 12 },
   scoreCircle: {
-    width: 110, height: 110, borderRadius: 55, borderWidth: 5,
-    alignItems: "center", justifyContent: "center", backgroundColor: "#fdfcf9",
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    borderWidth: 5,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#fdfcf9",
   },
   scoreCircleText: { fontSize: 30, fontWeight: "800" },
   scoreCircleMax: { fontSize: 12, color: "#a89f8c", marginTop: -2 },
   resultVerdict: { fontSize: 15, fontWeight: "700", marginBottom: 12 },
+
   warningBox: { backgroundColor: "#fff6e0", borderRadius: 10, padding: 10, width: "100%", marginBottom: 12 },
   warningText: { fontSize: 12, color: "#8a6d1f" },
+
   kootaList: { width: "100%" },
   kootaRow: {
-    flexDirection: "row", justifyContent: "space-between", paddingVertical: 9,
-    borderBottomWidth: 1, borderBottomColor: "#f2efe8",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: 9,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f2efe8",
   },
   kootaLabel: { textTransform: "capitalize", color: "#5c5347", fontWeight: "500" },
   kootaScore: { fontWeight: "700", color: "#2d1e3f" },
+
   modalOverlay: {
-    flex: 1, backgroundColor: "rgba(20,14,30,0.55)",
-    alignItems: "center", justifyContent: "center", padding: 24,
+    flex: 1,
+    backgroundColor: "rgba(20,14,30,0.55)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
   },
   modalCard: { backgroundColor: "#fff", borderRadius: 20, padding: 20, width: "100%", maxWidth: 400 },
   modalTitle: { fontSize: 17, fontWeight: "700", color: "#2d1e3f", textAlign: "center" },
@@ -532,12 +615,12 @@ const styles = StyleSheet.create({
   wheelRow: { flexDirection: "row", height: 220, gap: 4 },
   wheelColumn: { flex: 1 },
   wheelItem: { height: 44, alignItems: "center", justifyContent: "center", borderRadius: 8 },
-  wheelItemSelected: { backgroundColor: "#f3e8c9" },
+  wheelItemSelected: { backgroundColor: "#f7f5f0" },
   wheelItemText: { fontSize: 15, color: "#a89f8c" },
   wheelItemTextSelected: { color: "#2d1e3f", fontWeight: "700" },
   modalButtonRow: { flexDirection: "row", gap: 12, marginTop: 18 },
-  modalCancelBtn: { flex: 1, paddingVertical: 13, borderRadius: 12, alignItems: "center", backgroundColor: "#f2efe8" },
+  modalCancelBtn: { flex: 1, paddingVertical: 13, borderRadius: 24, alignItems: "center", backgroundColor: "#f2efe8" },
   modalCancelText: { color: "#5c5347", fontWeight: "700" },
-  modalConfirmBtn: { flex: 1, paddingVertical: 13, borderRadius: 12, alignItems: "center", backgroundColor: "#e0c878" },
-  modalConfirmText: { color: "#2d1e3f", fontWeight: "700" },
+  modalConfirmBtn: { flex: 1, paddingVertical: 13, borderRadius: 24, alignItems: "center", backgroundColor: "#e0672c" },
+  modalConfirmText: { color: "#fff", fontWeight: "700" },
 });
