@@ -165,45 +165,6 @@ export default function HomeScreen() {
           />
         </View>
 
-        <View style={styles.promoBanner}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.promoTitle}>Your First Chat is FREE</Text>
-            <Text style={styles.promoSubtitle}>Talk to an expert now</Text>
-          </View>
-          <View style={styles.promoIconBadge}>
-            <Ionicons name="gift-outline" size={26} color="#e0672c" />
-          </View>
-        </View>
-
-        <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionTitle}>Popular Astrologers</Text>
-        </View>
-
-        <View style={styles.list}>
-          {astrologers.length === 0 ? (
-            <Text style={styles.empty}>No astrologers available.</Text>
-          ) : (
-            astrologers.map((astro) => (
-              <AstrologerComponent
-                key={astro._id}
-                {...astro}
-                status={astro.availability}
-                price={astro.pricePerMinute}
-                onPress={() => {
-                  router.push({
-                    pathname: "/dashboard/astrologer-details",
-                    params: { astrologerId: astro._id },
-                  });
-                }}
-                onChatPress={() => {
-                  setSelectedAstro(astro);
-                  setModalVisible(true);
-                }}
-              />
-            ))
-          )}
-        </View>
-
         <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionTitle}>Quick Access</Text>
         </View>
@@ -241,6 +202,35 @@ export default function HomeScreen() {
             </View>
             <Text style={styles.quickText}>Match Kundli</Text>
           </TouchableOpacity>
+        </View>
+
+        <View style={styles.sectionHeaderRow}>
+          <Text style={styles.sectionTitle}>Popular Astrologers</Text>
+        </View>
+
+        <View style={styles.list}>
+          {astrologers.length === 0 ? (
+            <Text style={styles.empty}>No astrologers available.</Text>
+          ) : (
+            astrologers.map((astro) => (
+              <AstrologerComponent
+                key={astro._id}
+                {...astro}
+                status={astro.availability}
+                price={astro.pricePerMinute}
+                onPress={() => {
+                  router.push({
+                    pathname: "/dashboard/astrologer-details",
+                    params: { astrologerId: astro._id },
+                  });
+                }}
+                onChatPress={() => {
+                  setSelectedAstro(astro);
+                  setModalVisible(true);
+                }}
+              />
+            ))
+          )}
         </View>
       </ScrollView>
 
@@ -361,26 +351,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   searchInput: { flex: 1, color: "#2d1e3f" },
-
-  promoBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginHorizontal: 16,
-    marginBottom: 8,
-    padding: 16,
-    borderRadius: 18,
-    backgroundColor: "#2d1e3f",
-  },
-  promoTitle: { color: "#e0c878", fontWeight: "700", fontSize: 15, marginBottom: 2 },
-  promoSubtitle: { color: "#b7a9c9", fontSize: 12 },
-  promoIconBadge: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    backgroundColor: "#fdf6ec",
-    alignItems: "center",
-    justifyContent: "center",
-  },
 
   sectionHeaderRow: {
     flexDirection: "row",

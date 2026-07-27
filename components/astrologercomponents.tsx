@@ -8,7 +8,7 @@ import {
   StyleSheet,
 } from "react-native";
 
- const BASE_URL = "https://astro-backend-qdu5.onrender.com";
+const BASE_URL = "https://astro-backend-qdu5.onrender.com";
 
 type Props = {
   _id: string;
@@ -20,96 +20,84 @@ type Props = {
   price: number;
   oldPrice?: number;
   orders?: number;
+  rating?: number;
+  reviewCount?: number | string;
   status: "online" | "offline" | "busy" | string;
   waitTime?: string;
   profilePic?: string;
-  onPress?: () => void; 
+  onPress?: () => void;
   onChatPress?: () => void;
 };
 
 const AstrologerCard: React.FC<Props> = ({
   name,
-  bio,
   skills,
-  languages,
   experience,
   status,
-  waitTime,
   profilePic,
+  price,
+  rating,
+  reviewCount,
   onPress,
-  onChatPress,
 }) => {
-  const normalizedPic = profilePic
-  ? `${BASE_URL}${profilePic}`
-  : null;
- console.log("IMAGE URL:", normalizedPic);
-
-
+  const normalizedPic = profilePic ? `${BASE_URL}${profilePic}` : null;
+  const isOnline = status === "online";
 
   return (
-    <TouchableOpacity style={styles.card}
-  activeOpacity={0.85}
-  onPress={onPress}>
+    <TouchableOpacity
+      style={styles.card}
+      activeOpacity={0.85}
+      onPress={onPress}
+    >
       {/* Avatar */}
       {normalizedPic ? (
-       
         <Image source={{ uri: normalizedPic }} style={styles.avatar} />
-        
       ) : (
         <View style={styles.avatarFallback}>
-          <Ionicons name="person" size={40} color="#2d1e3f" />
+          <Ionicons name="person" size={28} color="#2d1e3f" />
         </View>
       )}
 
       {/* Info */}
       <View style={styles.info}>
-        <Text style={styles.name}>{name}</Text>
-
-        {bio && (
-          <Text style={styles.bio}>
-            <Text style={styles.label}>Bio: </Text>
-            {bio}
+        <View style={styles.nameRow}>
+          <Text style={styles.name} numberOfLines={1}>
+            {name}
           </Text>
-        )}
+          <View
+            style={[
+              styles.statusDot,
+              { backgroundColor: isOnline ? "#16a34a" : "#9ca3af" },
+            ]}
+          />
+          <Text
+            style={[
+              styles.statusText,
+              { color: isOnline ? "#16a34a" : "#9ca3af" },
+            ]}
+          >
+            {isOnline ? "Online" : "Offline"}
+          </Text>
+        </View>
 
-        <Text style={styles.text}>
-          <Text style={styles.label}>Skills: </Text>
+        <Text style={styles.skills} numberOfLines={1}>
           {skills}
         </Text>
 
-        <Text style={styles.text}>
-          <Text style={styles.label}>Languages: </Text>
-          {languages}
-        </Text>
+        <Text style={styles.exp}>{experience}+ Years Exp.</Text>
 
-        <Text style={styles.exp}>
-          <Text style={styles.label}>Exp: </Text>
-          {experience} yrs
-        </Text>
+        <View style={styles.bottomRow}>
+          <View style={styles.ratingRow}>
+            <Ionicons name="star" size={14} color="#f5b400" />
+            <Text style={styles.ratingText}>
+              {rating ?? "4.9"}{" "}
+              <Text style={styles.reviewText}>({reviewCount ?? "0"})</Text>
+            </Text>
+          </View>
+
+          <Text style={styles.price}>₹ {price}/min</Text>
+        </View>
       </View>
-
-      {/* Chat Button - Temporarily always enabled for testing */}
-      {/* Chat Button */}
-<TouchableOpacity
-  style={status === "online" ? styles.chatBtn : styles.chatDisabled}
-  onPress={(e) => {
-    e.stopPropagation();
-    if (status === "online" && onChatPress) {
-      onChatPress();
-    }
-  }}
-  disabled={status !== "online"}
->
-  <Text
-    style={
-      status === "online"
-        ? styles.chatText
-        : styles.chatDisabledText
-    }
-  >
-    {status === "online" ? "Chat" : "Offline"}
-  </Text>
-</TouchableOpacity>
     </TouchableOpacity>
   );
 };
@@ -121,30 +109,26 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#ffffff",
-    padding: 16,
-    borderRadius: 16,
+    padding: 12,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: "#2d1e3f",
-    marginBottom: 16,
+    borderColor: "#eee0bd",
+    marginBottom: 12,
   },
 
   avatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    borderWidth: 1,
-    borderColor: "#2d1e3f",
+    width: 52,
+    height: 52,
+    borderRadius: 12,
   },
 
   avatarFallback: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 52,
+    height: 52,
+    borderRadius: 12,
     backgroundColor: "#f3f4f6",
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "#2d1e3f",
   },
 
   info: {
@@ -152,69 +136,71 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
 
-  name: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#2d1e3f",
-  },
-
-  bio: {
-    fontSize: 12,
-    color: "#6b7280",
-    fontStyle: "italic",
-  },
-
-  label: {
-    fontWeight: "600",
-    fontStyle: "normal",
-    color: "#2d1e3f",
-  },
-
-  text: {
-    fontSize: 12,
-    color: "#4b5563",
-  },
-
-  exp: {
-    fontSize: 11,
-    color: "#2d1e3f",
-  },
-
-  chatBtn: {
-    backgroundColor: "#2d1e3f",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#e0c878",
-  },
-
-  chatText: {
-    color: "#e0c878",
-    fontWeight: "700",
-  },
-
-  offlineWrap: {
+  nameRow: {
+    flexDirection: "row",
     alignItems: "center",
   },
 
-  chatDisabled: {
-    backgroundColor: "#d1d5db",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#e0c878",
-  },
-
-  chatDisabledText: {
-    color: "#2d1e3f",
+  name: {
+    fontSize: 15,
     fontWeight: "700",
+    color: "#2d1e3f",
+    marginRight: 6,
+    maxWidth: "60%",
   },
 
-  waitText: {
-    marginTop: 4,
-    fontSize: 10,
-    color: "#ef4444",
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginRight: 4,
+  },
+
+  statusText: {
+    fontSize: 12,
+    fontWeight: "600",
+  },
+
+  skills: {
+    fontSize: 12,
+    color: "#6b7280",
+    marginTop: 2,
+  },
+
+  exp: {
+    fontSize: 12,
+    color: "#6b7280",
+    marginTop: 2,
+  },
+
+  bottomRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 6,
+  },
+
+  ratingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+
+  ratingText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#2d1e3f",
+  },
+
+  reviewText: {
+    fontSize: 12,
+    fontWeight: "400",
+    color: "#9ca3af",
+  },
+
+  price: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#e0672c",
   },
 });
