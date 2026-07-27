@@ -35,10 +35,8 @@ export default function Chat() {
   const [astrologers, setAstrologers] = useState<AstrologerType[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-
   const [modalVisible, setModalVisible] = useState(false);
-  const [selectedAstro, setSelectedAstro] =
-    useState<AstrologerType | null>(null);
+  const [selectedAstro, setSelectedAstro] = useState<AstrologerType | null>(null);
 
   useEffect(() => {
     const fetchAstrologers = async () => {
@@ -73,68 +71,54 @@ export default function Chat() {
 
   return (
     <View style={styles.container}>
-      <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
-        {/* HEADER */}
-        <View style={styles.header}>
-          <Ionicons
-            name="arrow-back"
-            size={24}
-            color="#e0c878"
-            onPress={() => router.back()}
-          />
-          <Text style={styles.headerTitle}>Chat</Text>
-        </View>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} hitSlop={10} style={styles.backBtn}>
+          <Ionicons name="arrow-back" size={20} color="#2d1e3f" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Chat</Text>
+        <View style={{ width: 34 }} />
+      </View>
 
-        {/* ASTROLOGER LIST */}
+      <ScrollView contentContainerStyle={{ paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
         <View style={styles.listContainer}>
           {astrologers.length === 0 ? (
-            <Text style={styles.emptyText}>
-              No approved astrologers available.
-            </Text>
+            <Text style={styles.emptyText}>No approved astrologers available.</Text>
           ) : (
-            astrologers.map((astro) => {
-              console.log("Astrologer:", astro.name, "Status:", astro.availability);
-              return (
-               <AstrologerComponent
-                 key={astro._id}
-                 {...astro}
-                 status={astro.availability}
-                 price={astro.pricePerMinute}
-                 
-                 onPress={() => {
-                   router.push({
-                     pathname: "/dashboard/astrologer-details",
-                     params: { astrologerId: astro._id },
-                   });
-                 }}
-               
-                 onChatPress={() => {
-                   setSelectedAstro(astro);
-                   setModalVisible(true);
-                 }}
-               />
-              );
-            })
+            astrologers.map((astro) => (
+              <AstrologerComponent
+                key={astro._id}
+                {...astro}
+                status={astro.availability}
+                price={astro.pricePerMinute}
+                onPress={() => {
+                  router.push({
+                    pathname: "/dashboard/astrologer-details",
+                    params: { astrologerId: astro._id },
+                  });
+                }}
+                onChatPress={() => {
+                  setSelectedAstro(astro);
+                  setModalVisible(true);
+                }}
+              />
+            ))
           )}
         </View>
       </ScrollView>
 
-     
       {modalVisible && selectedAstro && (
         <BlurView intensity={40} tint="dark" style={styles.blur}>
           <View style={styles.modal}>
             <Text style={styles.modalTitle}>{selectedAstro.name}</Text>
-
-            <Text style={styles.modalText}>
-              ₹{selectedAstro.pricePerMinute}/min
-            </Text>
+            <Text style={styles.modalText}>₹{selectedAstro.pricePerMinute}/min</Text>
 
             <View style={styles.modalRow}>
               <TouchableOpacity
                 style={styles.cancelBtn}
                 onPress={() => setModalVisible(false)}
+                activeOpacity={0.85}
               >
-                <Text>Cancel</Text>
+                <Text style={styles.cancelBtnText}>Cancel</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -146,8 +130,9 @@ export default function Chat() {
                     params: { astrologerId: selectedAstro._id },
                   });
                 }}
+                activeOpacity={0.85}
               >
-                <Text style={{ fontWeight: "bold" }}>Proceed</Text>
+                <Text style={styles.proceedBtnText}>Proceed</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -157,13 +142,10 @@ export default function Chat() {
   );
 }
 
-
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    position: "relative",
-    backgroundColor: "#f5f5f5",
+    backgroundColor: "#f7f5f0",
   },
 
   center: {
@@ -174,42 +156,48 @@ const styles = StyleSheet.create({
   },
 
   errorText: {
-    color: "red",
+    color: "#e0672c",
     fontSize: 16,
   },
 
   header: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 16,
-    paddingTop: 40,
+    justifyContent: "space-between",
     backgroundColor: "#2d1e3f",
-    borderBottomWidth: 1,
-    borderBottomColor: "#ddd",
+    paddingTop: 50,
+    padding: 20,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+  },
+
+  backBtn: {
+    backgroundColor: "#e0c878",
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: "center",
+    justifyContent: "center",
   },
 
   headerTitle: {
-    flex: 1,
-    textAlign: "center",
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#e0c878",
-    marginRight: 24,
+    fontSize: 17,
+    fontWeight: "700",
+    color: "#fdf6ec",
   },
 
   listContainer: {
     paddingHorizontal: 16,
-    marginTop: 16,
+    marginTop: 20,
   },
 
   emptyText: {
     textAlign: "center",
     marginTop: 24,
-    color: "#777",
-    fontSize: 16,
+    color: "#a89f8c",
+    fontSize: 15,
   },
 
- 
   blur: {
     position: "absolute",
     top: 0,
@@ -223,37 +211,47 @@ const styles = StyleSheet.create({
   modal: {
     backgroundColor: "#fff",
     width: "85%",
-    padding: 20,
-    borderRadius: 16,
+    padding: 22,
+    borderRadius: 20,
   },
 
   modalTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
+    fontSize: 19,
+    fontWeight: "700",
     textAlign: "center",
+    color: "#2d1e3f",
   },
 
   modalText: {
     textAlign: "center",
     marginVertical: 10,
-    fontSize: 16,
+    color: "#8a7f6a",
   },
 
   modalRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginTop: 20,
+    marginTop: 16,
+    gap: 12,
   },
 
   cancelBtn: {
-    padding: 10,
-    backgroundColor: "#ccc",
-    borderRadius: 8,
+    flex: 1,
+    padding: 13,
+    backgroundColor: "#f2efe8",
+    borderRadius: 24,
+    alignItems: "center",
   },
 
+  cancelBtnText: { color: "#5c5347", fontWeight: "700" },
+
   proceedBtn: {
-    padding: 10,
-    backgroundColor: "#e0c878",
-    borderRadius: 8,
+    flex: 1,
+    padding: 13,
+    backgroundColor: "#e0672c",
+    borderRadius: 24,
+    alignItems: "center",
   },
+
+  proceedBtnText: { color: "#fff", fontWeight: "700" },
 });
