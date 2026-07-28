@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, FlatList, StyleSheet, ActivityIndicator } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 
@@ -33,7 +34,7 @@ export default function HistoryScreen() {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#e0c878" />
+        <ActivityIndicator size="large" color="#e0672c" />
       </View>
     );
   }
@@ -46,32 +47,110 @@ export default function HistoryScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>Earnings History</Text>
+      <View style={styles.headerBar}>
+        <Text style={styles.header}>Earnings History</Text>
+        <Text style={styles.headerSubtitle}>Your completed sessions</Text>
+      </View>
+
       <FlatList
         data={sessions}
         keyExtractor={(item) => item._id}
+        contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
         renderItem={({ item }) => (
           <View style={styles.card}>
-            <Text style={styles.user}>User: {item.userName || "N/A"}</Text>
-            <Text style={styles.detail}>Duration: {formatDuration(item.totalMinutes || 0)}</Text>
-            <Text style={styles.earning}>Earned: {item.totalCoinsEarned || 0} coins</Text>
-            <Text style={styles.date}>{new Date(item.startTime).toLocaleString()}</Text>
+            <View style={styles.cardTopRow}>
+              <View style={styles.userIconBadge}>
+                <Ionicons name="person-outline" size={16} color="#2d1e3f" />
+              </View>
+              <Text style={styles.user}>{item.userName || "N/A"}</Text>
+              <Text style={styles.earning}>+{item.totalCoinsEarned || 0} coins</Text>
+            </View>
+
+            <View style={styles.cardBottomRow}>
+              <View style={styles.detailChip}>
+                <Ionicons name="time-outline" size={13} color="#8a7f6a" />
+                <Text style={styles.detail}>{formatDuration(item.totalMinutes || 0)}</Text>
+              </View>
+              <Text style={styles.date}>{new Date(item.startTime).toLocaleString()}</Text>
+            </View>
           </View>
         )}
-        ListEmptyComponent={<Text style={styles.empty}>No earnings history</Text>}
+        ListEmptyComponent={
+          <View style={styles.emptyBox}>
+            <Ionicons name="wallet-outline" size={36} color="#c2b280" />
+            <Text style={styles.empty}>No earnings history</Text>
+          </View>
+        }
       />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#1a1a2e", padding: 20, paddingBottom: 100 },
-  center: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#1a1a2e" },
-  header: { fontSize: 24, fontWeight: "bold", color: "#e0c878", marginBottom: 20 },
-  card: { backgroundColor: "#2d1e3f", padding: 15, borderRadius: 10, marginBottom: 10 },
-  user: { fontSize: 16, fontWeight: "bold", color: "#e0c878" },
-  detail: { fontSize: 14, color: "#fff", marginTop: 5 },
-  earning: { fontSize: 16, color: "#27ae60", marginTop: 5, fontWeight: "bold" },
-  date: { fontSize: 12, color: "#9e8b4e", marginTop: 5 },
-  empty: { textAlign: "center", color: "#9e8b4e", marginTop: 50 },
+  container: { flex: 1, backgroundColor: "#f7f5f0" },
+  center: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#f7f5f0" },
+
+  headerBar: {
+    backgroundColor: "#2d1e3f",
+    paddingTop: 50,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
+  header: { fontSize: 22, fontWeight: "700", color: "#e0c878" },
+  headerSubtitle: { fontSize: 12, color: "#b7a9c9", marginTop: 4 },
+
+  listContent: { padding: 16, paddingBottom: 100 },
+
+  card: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#f0ebe0",
+    shadowColor: "#2d1e3f",
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
+  },
+  cardTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  userIconBadge: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: "#f3e8c9",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  user: { flex: 1, fontSize: 15, fontWeight: "700", color: "#2d1e3f" },
+  earning: { fontSize: 14, color: "#2f9e44", fontWeight: "700" },
+
+  cardBottomRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 10,
+  },
+  detailChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#f7f5f0",
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+  },
+  detail: { fontSize: 12, color: "#8a7f6a" },
+  date: { fontSize: 11, color: "#a89f8c" },
+
+  emptyBox: { alignItems: "center", marginTop: 80, gap: 10 },
+  empty: { textAlign: "center", color: "#a89f8c", fontSize: 14 },
 });

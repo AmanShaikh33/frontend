@@ -115,7 +115,7 @@ export default function AstroForm() {
   if (isLoading) {
     return (
       <View style={styles.loading}>
-        <ActivityIndicator size="large" color="#e0c878" />
+        <ActivityIndicator size="large" color="#e0672c" />
       </View>
     );
   }
@@ -124,46 +124,57 @@ export default function AstroForm() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="#e0c878" />
+        <TouchableOpacity onPress={() => router.back()} hitSlop={12}>
+          <Ionicons name="chevron-back" size={24} color="#e0c878" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>
           {profileExists ? "Your Profile" : "Create Profile"}
         </Text>
+        <View style={{ width: 24 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <View style={styles.card}>
-          {renderInput("Name", name, setName, profileExists)}
-          {renderInput("Bio", bio, setBio, profileExists, true)}
-          {renderInput("Skills (comma separated)", skills, setSkills, profileExists)}
-          {renderInput("Languages (comma separated)", languages, setLanguages, profileExists)}
-          {renderInput("Price per Minute (₹)", price, setPrice, profileExists, false, "numeric")}
-          {renderInput("Experience (years)", experience, setExperience, profileExists, false, "numeric")}
-
-          <Text style={styles.label}>Profile Picture</Text>
-          <TouchableOpacity
-            style={styles.uploadBtn}
-            onPress={pickImage}
-            disabled={profileExists}
-          >
-            <Text style={styles.uploadText}>
+          <View style={styles.avatarWrap}>
+            <TouchableOpacity
+              style={styles.avatarTouchable}
+              onPress={pickImage}
+              disabled={profileExists}
+              activeOpacity={0.85}
+            >
+              {profilePic ? (
+                <Image source={{ uri: profilePic.uri }} style={styles.avatar} />
+              ) : (
+                <View style={styles.avatarPlaceholder}>
+                  <Ionicons name="camera-outline" size={26} color="#a3915a" />
+                </View>
+              )}
+              {!profileExists && (
+                <View style={styles.avatarEditBadge}>
+                  <Ionicons name="pencil" size={12} color="#fff" />
+                </View>
+              )}
+            </TouchableOpacity>
+            <Text style={styles.avatarHint}>
               {profilePic
                 ? profileExists
-                  ? "Profile Picture Uploaded"
-                  : "Change Profile Picture"
-                : "Upload Profile Picture"}
+                  ? "Profile picture uploaded"
+                  : "Tap to change picture"
+                : "Tap to upload picture"}
             </Text>
-          </TouchableOpacity>
+          </View>
 
-          {profilePic && (
-            <Image source={{ uri: profilePic.uri }} style={styles.avatar} />
-          )}
+          {renderInput("Name", name, setName, profileExists, "person-outline")}
+          {renderInput("Bio", bio, setBio, profileExists, "chatbubble-outline", true)}
+          {renderInput("Skills (comma separated)", skills, setSkills, profileExists, "star-outline")}
+          {renderInput("Languages (comma separated)", languages, setLanguages, profileExists, "language-outline")}
+          {renderInput("Price per Minute (₹)", price, setPrice, profileExists, "cash-outline", false, "numeric")}
+          {renderInput("Experience (years)", experience, setExperience, profileExists, "ribbon-outline", false, "numeric")}
 
           {!profileExists && (
-            <TouchableOpacity style={styles.createBtn} onPress={handleCreateProfile}>
+            <TouchableOpacity style={styles.createBtn} onPress={handleCreateProfile} activeOpacity={0.85}>
               {isLoading ? (
-                <ActivityIndicator size="small" color="#2d1e3f" />
+                <ActivityIndicator size="small" color="#fff" />
               ) : (
                 <Text style={styles.createText}>Create Profile</Text>
               )}
@@ -172,6 +183,7 @@ export default function AstroForm() {
 
           {profileExists && (
             <View style={styles.doneBox}>
+              <Ionicons name="checkmark-circle" size={20} color="#2f9e44" />
               <Text style={styles.doneText}>Profile Created!</Text>
             </View>
           )}
@@ -187,46 +199,53 @@ const renderInput = (
   value: string,
   setValue: any,
   disabled: boolean,
+  icon: string = "create-outline",
   multiline = false,
   keyboardType: any = "default"
 ) => (
-  <>
+  <View style={{ marginBottom: 14 }}>
     <Text style={styles.label}>{label}</Text>
-    <TextInput
-      value={value}
-      onChangeText={setValue}
-      editable={!disabled}
-      multiline={multiline}
-      keyboardType={keyboardType}
-      placeholderTextColor="#9e8b4e"
-      style={styles.input}
-    />
-  </>
+    <View style={[styles.inputRow, multiline && styles.inputRowMultiline]}>
+      <Ionicons name={icon as any} size={18} color="#a3915a" style={multiline ? { marginTop: 12 } : undefined} />
+      <TextInput
+        value={value}
+        onChangeText={setValue}
+        editable={!disabled}
+        multiline={multiline}
+        keyboardType={keyboardType}
+        placeholderTextColor="#c2b280"
+        style={[styles.input, multiline && styles.inputMultiline]}
+      />
+    </View>
+  </View>
 );
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#ffffff",
+    backgroundColor: "#f7f5f0",
   },
 
   loading: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#ffffff",
+    backgroundColor: "#f7f5f0",
   },
 
   header: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
     padding: 16,
-    paddingTop: 40,
+    paddingTop: 50,
+    paddingBottom: 20,
     backgroundColor: "#2d1e3f",
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
   },
 
   headerTitle: {
-    marginLeft: 50,
     fontSize: 18,
     fontWeight: "700",
     color: "#e0c878",
@@ -234,78 +253,133 @@ const styles = StyleSheet.create({
 
   scroll: {
     padding: 16,
-    paddingBottom: 120,
+    paddingBottom: 60,
   },
 
   card: {
     backgroundColor: "#ffffff",
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 20,
+    padding: 20,
     borderWidth: 1,
-    borderColor: "#e5e7eb",
+    borderColor: "#f0ebe0",
+    shadowColor: "#2d1e3f",
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+  },
+
+  avatarWrap: {
+    alignItems: "center",
+    marginBottom: 22,
+  },
+  avatarTouchable: {
+    position: "relative",
+  },
+  avatar: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    borderWidth: 2,
+    borderColor: "#f3e8c9",
+  },
+  avatarPlaceholder: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: "#fffdf7",
+    borderWidth: 1.5,
+    borderColor: "#eee0bd",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarEditBadge: {
+    position: "absolute",
+    bottom: 2,
+    right: 2,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "#e0672c",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "#fff",
+  },
+  avatarHint: {
+    marginTop: 10,
+    fontSize: 12,
+    color: "#8a7f6a",
   },
 
   label: {
-    color: "#374151",
-    marginBottom: 4,
+    color: "#8a7f6a",
+    marginBottom: 6,
+    fontSize: 12,
+    fontWeight: "600",
+    letterSpacing: 0.3,
+  },
+
+  inputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    borderWidth: 1.2,
+    borderColor: "#eee0bd",
+    backgroundColor: "#fffdf7",
+    borderRadius: 14,
+    paddingHorizontal: 12,
+  },
+  inputRowMultiline: {
+    alignItems: "flex-start",
+    paddingVertical: 4,
   },
 
   input: {
-    borderWidth: 1,
-    borderColor: "#e0c878",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginBottom: 16,
-    color: "#000",
-  },
-
-  uploadBtn: {
-    backgroundColor: "#e0c878",
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: "center",
-    marginBottom: 12,
-  },
-
-  uploadText: {
+    flex: 1,
     color: "#2d1e3f",
-    fontWeight: "700",
+    paddingVertical: 12,
   },
-
-  avatar: {
-    width: 128,
-    height: 128,
-    borderRadius: 64,
-    alignSelf: "center",
-    marginBottom: 16,
+  inputMultiline: {
+    minHeight: 70,
+    textAlignVertical: "top",
+    paddingTop: 10,
   },
 
   createBtn: {
-    backgroundColor: "#e0c878",
-    paddingVertical: 14,
-    borderRadius: 8,
+    backgroundColor: "#e0672c",
+    paddingVertical: 15,
+    borderRadius: 26,
     alignItems: "center",
-    marginBottom: 20,
+    marginTop: 8,
+    shadowColor: "#e0672c",
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 4,
   },
 
   createText: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "700",
-    color: "#2d1e3f",
+    color: "#fff",
+    letterSpacing: 0.3,
   },
 
   doneBox: {
-    backgroundColor: "#e5e7eb",
-    paddingVertical: 14,
-    borderRadius: 8,
+    flexDirection: "row",
+    justifyContent: "center",
     alignItems: "center",
-    marginBottom: 20,
+    gap: 8,
+    backgroundColor: "#eafbea",
+    paddingVertical: 14,
+    borderRadius: 20,
+    marginTop: 8,
   },
 
   doneText: {
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: "700",
-    color: "#374151",
+    color: "#2f9e44",
   },
 });

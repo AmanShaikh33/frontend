@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, Button, ActivityIndicator, TouchableOpacity, Alert, Modal,StyleSheet } from "react-native";
+import { View, Text, Button, ActivityIndicator, TouchableOpacity, Alert, Modal, StyleSheet, ScrollView } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { jwtDecode } from "jwt-decode";
@@ -151,7 +152,7 @@ await loadEarnings(token);
   if (loading) {
   return (
     <View style={styles.loadingContainer}>
-      <ActivityIndicator size="large" color="#e0c878" />
+      <ActivityIndicator size="large" color="#e0672c" />
       <Text style={styles.loadingText}>Loading Dashboard...</Text>
     </View>
   );
@@ -161,86 +162,96 @@ return (
   <View style={styles.container}>
     {/* Header */}
     <View style={styles.header}>
-      <Text style={styles.welcome}>Welcome</Text>
-      <Text style={styles.username}>{user?.name || "Astrologer"}</Text>
+      <View style={styles.headerTopRow}>
+        <View>
+          <Text style={styles.welcome}>Welcome back</Text>
+          <Text style={styles.username}>{user?.name || "Astrologer"}</Text>
+        </View>
+        <View style={[styles.statusDotBadge, availability === "online" ? styles.statusDotOnline : styles.statusDotOffline]}>
+          <View style={[styles.statusDot, availability === "online" ? styles.dotOnline : styles.dotOffline]} />
+          <Text style={styles.statusDotText}>{availability === "online" ? "Online" : "Offline"}</Text>
+        </View>
+      </View>
     </View>
 
-    {/* Earnings Card */}
-    <View style={styles.card}>
-  <Text style={styles.cardTitle}>Earnings Overview</Text>
+    <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      {/* Earnings Card */}
+      <View style={styles.card}>
+        <View style={styles.cardIconBadge}>
+          <Ionicons name="cash-outline" size={20} color="#2d1e3f" />
+        </View>
+        <Text style={styles.cardTitle}>EARNINGS OVERVIEW</Text>
 
-  {loadingEarnings ? (
-    <ActivityIndicator size="small" color="#e0c878" />
-  ) : (
-    <>
-      <Text style={styles.earnings}>₹ {earnings.toFixed(2)}</Text>
+        {loadingEarnings ? (
+          <ActivityIndicator size="small" color="#e0672c" />
+        ) : (
+          <>
+            <Text style={styles.earnings}>₹ {earnings.toFixed(2)}</Text>
 
-      <View style={{ marginTop: 15 }}>
-        <Text style={{ color: "#cccccc" }}>Total Paid</Text>
-        <Text style={{ color: "#4ade80", fontWeight: "bold", fontSize: 18 }}>
-          ₹ {totalPaid.toFixed(2)}
-        </Text>
+            <View style={styles.statsRow}>
+              <View style={styles.statBox}>
+                <Text style={styles.statLabel}>Total Paid</Text>
+                <Text style={styles.statValuePaid}>₹ {totalPaid.toFixed(2)}</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statBox}>
+                <Text style={styles.statLabel}>Pending</Text>
+                <Text style={styles.statValuePending}>₹ {pendingAmount.toFixed(2)}</Text>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              onPress={() => router.push("/astrologerdashboard/settlement-history")}
+              style={styles.detailsButton}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.detailsText}>View Details</Text>
+              <Ionicons name="chevron-forward" size={16} color="#fff" />
+            </TouchableOpacity>
+          </>
+        )}
       </View>
 
-      <View style={{ marginTop: 10 }}>
-        <Text style={{ color: "#cccccc" }}>Pending Amount</Text>
-        <Text style={{ color: "#facc15", fontWeight: "bold", fontSize: 18 }}>
-          ₹ {pendingAmount.toFixed(2)}
-        </Text>
-      </View>
-        <TouchableOpacity
-    onPress={() => router.push("/astrologerdashboard/settlement-history")}
-    style={styles.detailsButton}
-  >
-    <Text style={styles.detailsText}>View Details</Text>
-  </TouchableOpacity>
-    </>
-  )}
-</View>
+      {/* Availability Card */}
+      <View style={styles.statusCard}>
+        <Text style={styles.statusLabel}>Current Status</Text>
 
-    {/* Availability Card */}
-    <View style={styles.statusCard}>
-      <Text style={styles.statusLabel}>Current Status</Text>
-
-      <View style={styles.statusRow}>
-        <Text
-          style={[
-            styles.statusText,
-            availability === "online"
-              ? styles.online
-              : styles.offline,
-          ]}
-        >
-          {availability === "online" ? "● Online" : "● Offline"}
-        </Text>
-
-        <TouchableOpacity
-          onPress={toggleAvailability}
-          disabled={updating}
-          style={[
-            styles.toggleButton,
-            availability === "online"
-              ? styles.offlineButton
-              : styles.onlineButton,
-          ]}
-        >
-          <Text style={styles.toggleButtonText}>
-            {updating
-              ? "Updating..."
-              : availability === "online"
-              ? "Go Offline"
-              : "Go Online"}
+        <View style={styles.statusRow}>
+          <Text
+            style={[
+              styles.statusText,
+              availability === "online" ? styles.online : styles.offline,
+            ]}
+          >
+            {availability === "online" ? "● Online" : "● Offline"}
           </Text>
-        </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={toggleAvailability}
+            disabled={updating}
+            style={[
+              styles.toggleButton,
+              availability === "online" ? styles.offlineButton : styles.onlineButton,
+            ]}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.toggleButtonText}>
+              {updating
+                ? "Updating..."
+                : availability === "online"
+                ? "Go Offline"
+                : "Go Online"}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
-    </View>
 
-    {/* Logout */}
-    <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
-      <Text style={styles.logoutText}>Logout</Text>
-    </TouchableOpacity>
-
-  
+      {/* Logout */}
+      <TouchableOpacity onPress={handleLogout} style={styles.logoutButton} activeOpacity={0.85}>
+        <Ionicons name="log-out-outline" size={18} color="#2d1e3f" />
+        <Text style={styles.logoutText}>Logout</Text>
+      </TouchableOpacity>
+    </ScrollView>
   </View>
 );
 };
@@ -250,66 +261,139 @@ export default UserHome;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#1a102b",
-    paddingHorizontal: 20,
-    paddingTop: 60,
+    backgroundColor: "#f7f5f0",
   },
   loadingContainer: {
     flex: 1,
-    backgroundColor: "#1a102b",
+    backgroundColor: "#f7f5f0",
     justifyContent: "center",
     alignItems: "center",
   },
   loadingText: {
-    color: "#e0c878",
+    color: "#8a7f6a",
     marginTop: 15,
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "600",
   },
   header: {
-    marginBottom: 30,
+    backgroundColor: "#2d1e3f",
+    paddingHorizontal: 20,
+    paddingTop: 54,
+    paddingBottom: 24,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+  },
+  headerTopRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
   },
   welcome: {
-    fontSize: 28,
-    fontWeight: "800",
-    color: "#ffffff",
+    fontSize: 13,
+    color: "#b7a9c9",
   },
   username: {
-    fontSize: 20,
+    fontSize: 22,
     color: "#e0c878",
-    marginTop: 6,
-    fontWeight: "600",
+    marginTop: 4,
+    fontWeight: "700",
   },
+  statusDotBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 14,
+  },
+  statusDotOnline: { backgroundColor: "rgba(74,222,128,0.15)" },
+  statusDotOffline: { backgroundColor: "rgba(248,113,113,0.15)" },
+  statusDot: { width: 8, height: 8, borderRadius: 4 },
+  dotOnline: { backgroundColor: "#4ade80" },
+  dotOffline: { backgroundColor: "#f87171" },
+  statusDotText: { color: "#fff", fontSize: 12, fontWeight: "600" },
+
+  scrollContent: { padding: 20, paddingBottom: 60 },
+
   card: {
-    backgroundColor: "#3c2a52",
-    padding: 25,
-    borderRadius: 20,
-    marginBottom: 25,
-    elevation: 8,
+    backgroundColor: "#fff",
+    padding: 24,
+    borderRadius: 22,
+    marginBottom: 18,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#f0ebe0",
+    shadowColor: "#2d1e3f",
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 3,
+  },
+  cardIconBadge: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#f3e8c9",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
   },
   cardTitle: {
-    fontSize: 14,
-    color: "#cccccc",
+    fontSize: 12,
+    color: "#a89f8c",
     textAlign: "center",
     marginBottom: 10,
     letterSpacing: 1,
+    fontWeight: "600",
   },
   earnings: {
-    fontSize: 36,
-    fontWeight: "bold",
-    color: "#e0c878",
+    fontSize: 34,
+    fontWeight: "800",
+    color: "#2d1e3f",
     textAlign: "center",
   },
+  statsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 20,
+    width: "100%",
+  },
+  statBox: { flex: 1, alignItems: "center" },
+  statDivider: { width: 1, height: 34, backgroundColor: "#f0ebe0" },
+  statLabel: { color: "#a89f8c", fontSize: 12, marginBottom: 4 },
+  statValuePaid: { color: "#2f9e44", fontWeight: "700", fontSize: 17 },
+  statValuePending: { color: "#e0a800", fontWeight: "700", fontSize: 17 },
+
+  detailsButton: {
+    marginTop: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 22,
+    backgroundColor: "#e0672c",
+    alignSelf: "stretch",
+  },
+  detailsText: {
+    color: "#fff",
+    fontWeight: "700",
+  },
+
   statusCard: {
-    backgroundColor: "#2d1e3f",
+    backgroundColor: "#fff",
     padding: 20,
     borderRadius: 20,
-    marginBottom: 30,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: "#f0ebe0",
   },
   statusLabel: {
-    color: "#aaaaaa",
-    fontSize: 14,
+    color: "#a89f8c",
+    fontSize: 12,
     marginBottom: 12,
+    fontWeight: "600",
   },
   statusRow: {
     flexDirection: "row",
@@ -317,40 +401,44 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   statusText: {
-    fontSize: 18,
-    fontWeight: "bold",
+    fontSize: 17,
+    fontWeight: "700",
   },
   online: {
-    color: "#4ade80",
+    color: "#2f9e44",
   },
   offline: {
-    color: "#f87171",
+    color: "#d9480f",
   },
   toggleButton: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 18,
     paddingVertical: 10,
-    borderRadius: 15,
+    borderRadius: 18,
   },
   onlineButton: {
-    backgroundColor: "#22c55e",
+    backgroundColor: "#2f9e44",
   },
   offlineButton: {
-    backgroundColor: "#ef4444",
+    backgroundColor: "#d9480f",
   },
   toggleButtonText: {
     color: "#ffffff",
-    fontWeight: "bold",
+    fontWeight: "700",
+    fontSize: 13,
   },
   logoutButton: {
-    backgroundColor: "#e0c878",
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#f3e8c9",
     paddingVertical: 15,
-    borderRadius: 20,
+    borderRadius: 22,
   },
   logoutText: {
-    textAlign: "center",
-    fontWeight: "bold",
-    fontSize: 16,
-    color: "#1a102b",
+    fontWeight: "700",
+    fontSize: 15,
+    color: "#2d1e3f",
   },
   modalOverlay: {
     flex: 1,
@@ -398,16 +486,4 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontWeight: "bold",
   },
-  detailsButton: {
-  marginTop: 15,
-  paddingVertical: 8,
-  borderRadius: 10,
-  backgroundColor: "#e0c878",
-  alignItems: "center",
-},
-
-detailsText: {
-  color: "#1a102b",
-  fontWeight: "bold",
-},
 });

@@ -100,7 +100,7 @@ export default function Profile() {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#e0c878" />
+        <ActivityIndicator size="large" color="#e0672c" />
       </View>
     );
   }
@@ -120,13 +120,14 @@ export default function Profile() {
     <View style={styles.container}>
       
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="#e0c878" />
+        <TouchableOpacity onPress={() => router.back()} hitSlop={12}>
+          <Ionicons name="chevron-back" size={24} color="#e0c878" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>My Profile</Text>
+        <View style={{ width: 24 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <View style={styles.card}>
         
           <View style={styles.imageBox}>
@@ -134,52 +135,63 @@ export default function Profile() {
               <Image source={{ uri: imageUrl }} style={styles.avatar} />
             ) : (
               <View style={styles.noImage}>
-                <Text>No Image</Text>
+                <Ionicons name="person-outline" size={36} color="#a3915a" />
               </View>
             )}
             <Text style={styles.name}>
               {profile.name || userName}
             </Text>
+
+            <View
+              style={[
+                styles.approval,
+                profile.isApproved === "approved" ? styles.approved : styles.pending,
+              ]}
+            >
+              <Ionicons
+                name={profile.isApproved === "approved" ? "checkmark-circle" : "time-outline"}
+                size={14}
+                color={profile.isApproved === "approved" ? "#2f9e44" : "#e0a800"}
+              />
+              <Text
+                style={[
+                  styles.approvalText,
+                  { color: profile.isApproved === "approved" ? "#2f9e44" : "#e0a800" },
+                ]}
+              >
+                {profile.isApproved === "approved" ? "Approved" : "Pending Approval"}
+              </Text>
+            </View>
           </View>
 
-          {renderRow("Bio", profile.bio)}
-          {renderRow(
-            "Skills",
-            Array.isArray(profile.skills)
-              ? profile.skills.join(", ")
-              : profile.skills
-          )}
-          {renderRow(
-            "Languages",
-            Array.isArray(profile.languages)
-              ? profile.languages.join(", ")
-              : profile.languages
-          )}
-          {renderRow("Price per Minute (₹)", profile.pricePerMinute)}
-          {renderRow("Experience", `${profile.experience} years`)}
-
-          <View
-            style={[
-              styles.approval,
-              profile.isApproved === "approved"
-                ? styles.approved
-                : styles.pending,
-            ]}
-          >
-            <Text style={styles.approvalText}>
-              Approval: {profile.isApproved || "pending"}
-            </Text>
+          <View style={styles.infoList}>
+            {renderRow("chatbubble-outline", "Bio", profile.bio)}
+            {renderRow(
+              "star-outline",
+              "Skills",
+              Array.isArray(profile.skills) ? profile.skills.join(", ") : profile.skills
+            )}
+            {renderRow(
+              "language-outline",
+              "Languages",
+              Array.isArray(profile.languages) ? profile.languages.join(", ") : profile.languages
+            )}
+            {renderRow("cash-outline", "Price per Minute", `₹${profile.pricePerMinute}`)}
+            {renderRow("ribbon-outline", "Experience", `${profile.experience} years`)}
           </View>
 
           {profile.isApproved === "approved" ? (
             <TouchableOpacity
               style={styles.editBtn}
               onPress={() => setEditModalVisible(true)}
+              activeOpacity={0.85}
             >
+              <Ionicons name="create-outline" size={18} color="#fff" />
               <Text style={styles.editText}>Edit Profile</Text>
             </TouchableOpacity>
           ) : (
             <View style={styles.waitBox}>
+              <Ionicons name="hourglass-outline" size={16} color="#8a6d1f" />
               <Text style={styles.waitText}>
                 You can edit your profile after approval.
               </Text>
@@ -194,25 +206,27 @@ export default function Profile() {
           <View style={styles.modalBox}>
             <Text style={styles.modalTitle}>Edit Profile</Text>
 
-            <ScrollView>
-              {renderInput("Name", name, setName)}
-              {renderInput("Bio", bio, setBio, true)}
-              {renderInput("Skills", skills, setSkills)}
-              {renderInput("Languages", languages, setLanguages)}
-              {renderInput("Price per Minute", price, setPrice, false, "numeric")}
-              {renderInput("Experience", experience, setExperience, false, "numeric")}
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {renderInput("Name", name, setName, "person-outline")}
+              {renderInput("Bio", bio, setBio, "chatbubble-outline", true)}
+              {renderInput("Skills", skills, setSkills, "star-outline")}
+              {renderInput("Languages", languages, setLanguages, "language-outline")}
+              {renderInput("Price per Minute", price, setPrice, "cash-outline", false, "numeric")}
+              {renderInput("Experience", experience, setExperience, "ribbon-outline", false, "numeric")}
 
               <View style={styles.modalActions}>
                 <TouchableOpacity
                   style={styles.cancelBtn}
                   onPress={() => setEditModalVisible(false)}
+                  activeOpacity={0.85}
                 >
-                  <Text style={styles.btnText}>Cancel</Text>
+                  <Text style={styles.cancelBtnText}>Cancel</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
                   style={styles.saveBtn}
                   onPress={handleUpdateProfile}
+                  activeOpacity={0.85}
                 >
                   <Text style={styles.saveText}>Save</Text>
                 </TouchableOpacity>
@@ -226,10 +240,15 @@ export default function Profile() {
 }
 
 
-const renderRow = (label: string, value: any) => (
+const renderRow = (icon: string, label: string, value: any) => (
   <View style={styles.row}>
-    <Text style={styles.label}>{label}</Text>
-    <Text style={styles.value}>{value}</Text>
+    <View style={styles.rowIconBadge}>
+      <Ionicons name={icon as any} size={16} color="#a3915a" />
+    </View>
+    <View style={{ flex: 1 }}>
+      <Text style={styles.label}>{label}</Text>
+      <Text style={styles.value}>{value}</Text>
+    </View>
   </View>
 );
 
@@ -237,143 +256,211 @@ const renderInput = (
   placeholder: string,
   value: string,
   setValue: any,
+  icon: string = "create-outline",
   multiline = false,
   keyboardType: any = "default"
 ) => (
-  <TextInput
-    placeholder={placeholder}
-    value={value}
-    onChangeText={setValue}
-    multiline={multiline}
-    keyboardType={keyboardType}
-    style={styles.input}
-  />
+  <View style={[styles.inputRow, multiline && styles.inputRowMultiline]}>
+    <Ionicons name={icon as any} size={18} color="#a3915a" style={multiline ? { marginTop: 12 } : undefined} />
+    <TextInput
+      placeholder={placeholder}
+      placeholderTextColor="#c2b280"
+      value={value}
+      onChangeText={setValue}
+      multiline={multiline}
+      keyboardType={keyboardType}
+      style={[styles.input, multiline && styles.inputMultiline]}
+    />
+  </View>
 );
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
-  center: { flex: 1, justifyContent: "center", alignItems: "center" },
-  empty: { color: "#6b7280", fontSize: 16 },
+  container: { flex: 1, backgroundColor: "#f7f5f0" },
+  center: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#f7f5f0" },
+  empty: { color: "#8a7f6a", fontSize: 15 },
 
   header: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
     padding: 16,
-    paddingTop: 40,
+    paddingTop: 50,
+    paddingBottom: 20,
     backgroundColor: "#2d1e3f",
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
   },
   headerTitle: {
-    flex: 1,
-    textAlign: "center",
     color: "#e0c878",
     fontSize: 18,
     fontWeight: "700",
-    marginRight: 24,
   },
 
-  scroll: { padding: 16, paddingBottom: 120 },
+  scroll: { padding: 16, paddingBottom: 60 },
 
   card: {
     backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 20,
+    padding: 20,
     borderWidth: 1,
-    borderColor: "#e5e7eb",
+    borderColor: "#f0ebe0",
+    shadowColor: "#2d1e3f",
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
   },
 
-  imageBox: { alignItems: "center", marginBottom: 20 },
+  imageBox: { alignItems: "center", marginBottom: 22 },
   avatar: {
-    width: 128,
-    height: 128,
-    borderRadius: 64,
-    borderWidth: 4,
-    borderColor: "#e0c878",
-    marginBottom: 8,
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    borderWidth: 3,
+    borderColor: "#f3e8c9",
+    marginBottom: 10,
   },
   noImage: {
-    width: 128,
-    height: 128,
-    borderRadius: 64,
-    backgroundColor: "#d1d5db",
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    backgroundColor: "#fffdf7",
+    borderWidth: 1.5,
+    borderColor: "#eee0bd",
     justifyContent: "center",
     alignItems: "center",
+    marginBottom: 10,
   },
-  name: { fontSize: 20, fontWeight: "700", color: "#2d1e3f" },
-
-  row: { marginBottom: 12 },
-  label: { fontWeight: "600", color: "#374151" },
-  value: { color: "#111827" },
+  name: { fontSize: 19, fontWeight: "700", color: "#2d1e3f", marginBottom: 8 },
 
   approval: {
-    marginTop: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
+    flexDirection: "row",
     alignItems: "center",
+    gap: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 14,
   },
-  approved: { backgroundColor: "#dcfce7" },
-  pending: { backgroundColor: "#fef9c3" },
-  approvalText: { fontWeight: "600" },
+  approved: { backgroundColor: "#eafbea" },
+  pending: { backgroundColor: "#fff6e0" },
+  approvalText: { fontWeight: "700", fontSize: 12 },
+
+  infoList: { marginTop: 4, marginBottom: 8 },
+  row: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f2efe8",
+  },
+  rowIconBadge: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: "#fffdf7",
+    borderWidth: 1,
+    borderColor: "#eee0bd",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 2,
+  },
+  label: { fontWeight: "600", color: "#a89f8c", fontSize: 11, marginBottom: 2, letterSpacing: 0.3 },
+  value: { color: "#2d1e3f", fontSize: 14 },
 
   editBtn: {
-    marginTop: 16,
-    backgroundColor: "#e0c878",
-    paddingVertical: 12,
-    borderRadius: 8,
+    marginTop: 20,
+    flexDirection: "row",
+    justifyContent: "center",
     alignItems: "center",
+    gap: 8,
+    backgroundColor: "#e0672c",
+    paddingVertical: 14,
+    borderRadius: 24,
+    shadowColor: "#e0672c",
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 4,
   },
-  editText: { color: "#2d1e3f", fontWeight: "700", fontSize: 16 },
+  editText: { color: "#fff", fontWeight: "700", fontSize: 15 },
 
   waitBox: {
-    marginTop: 16,
-    backgroundColor: "#fef3c7",
-    paddingVertical: 12,
-    borderRadius: 8,
+    marginTop: 20,
+    flexDirection: "row",
+    justifyContent: "center",
     alignItems: "center",
+    gap: 8,
+    backgroundColor: "#fff6e0",
+    paddingVertical: 14,
+    borderRadius: 18,
   },
-  waitText: { color: "#92400e", fontWeight: "600" },
+  waitText: { color: "#8a6d1f", fontWeight: "600", fontSize: 12, textAlign: "center", flexShrink: 1 },
 
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
+    backgroundColor: "rgba(20,14,30,0.55)",
     justifyContent: "center",
     padding: 20,
   },
   modalBox: {
     backgroundColor: "#fff",
-    borderRadius: 16,
+    borderRadius: 20,
     padding: 20,
+    maxHeight: "85%",
   },
   modalTitle: {
-    fontSize: 20,
+    fontSize: 19,
     fontWeight: "700",
     color: "#2d1e3f",
+    marginBottom: 16,
+    textAlign: "center",
+  },
+  inputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    borderWidth: 1.2,
+    borderColor: "#eee0bd",
+    backgroundColor: "#fffdf7",
+    borderRadius: 14,
+    paddingHorizontal: 12,
     marginBottom: 12,
   },
+  inputRowMultiline: {
+    alignItems: "flex-start",
+    paddingVertical: 4,
+  },
   input: {
-    borderWidth: 1,
-    borderColor: "#d1d5db",
-    borderRadius: 8,
-    padding: 10,
-    marginBottom: 12,
-    color: "#000",
+    flex: 1,
+    paddingVertical: 12,
+    color: "#2d1e3f",
+  },
+  inputMultiline: {
+    minHeight: 70,
+    textAlignVertical: "top",
+    paddingTop: 10,
   },
   modalActions: {
     flexDirection: "row",
     justifyContent: "space-between",
+    gap: 12,
     marginTop: 10,
   },
   cancelBtn: {
-    backgroundColor: "#9ca3af",
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
+    flex: 1,
+    backgroundColor: "#f2efe8",
+    paddingVertical: 13,
+    borderRadius: 22,
+    alignItems: "center",
   },
   saveBtn: {
-    backgroundColor: "#e0c878",
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
+    flex: 1,
+    backgroundColor: "#e0672c",
+    paddingVertical: 13,
+    borderRadius: 22,
+    alignItems: "center",
   },
-  btnText: { color: "#fff", fontWeight: "700" },
-  saveText: { color: "#2d1e3f", fontWeight: "700" },
+  cancelBtnText: { color: "#5c5347", fontWeight: "700" },
+  saveText: { color: "#fff", fontWeight: "700" },
 });
