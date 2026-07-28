@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, FlatList, ActivityIndicator, StyleSheet } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 
@@ -33,31 +34,50 @@ export default function SettlementHistory() {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#e0c878" />
+        <ActivityIndicator size="large" color="#e0672c" />
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>Settlement History</Text>
+      <View style={styles.headerBar}>
+        <Text style={styles.header}>Settlement History</Text>
+        <Text style={styles.headerSubtitle}>Your payout records</Text>
+      </View>
 
       <FlatList
         data={history}
         keyExtractor={(item) => item._id}
+        contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
         renderItem={({ item }) => (
           <View style={styles.card}>
-            <Text style={styles.amount}>₹ {item.amount}</Text>
-            <Text style={styles.date}>
-              {new Date(item.paidAt).toLocaleString()}
-            </Text>
-            <Text style={styles.ref}>
-              UPI Ref: {item.upiReference}
-            </Text>
+            <View style={styles.cardTopRow}>
+              <View style={styles.iconBadge}>
+                <Ionicons name="checkmark-circle-outline" size={18} color="#2f9e44" />
+              </View>
+              <Text style={styles.amount}>₹ {item.amount}</Text>
+            </View>
+
+            <View style={styles.cardDetailRow}>
+              <Ionicons name="calendar-outline" size={13} color="#a89f8c" />
+              <Text style={styles.date}>
+                {new Date(item.paidAt).toLocaleString()}
+              </Text>
+            </View>
+
+            <View style={styles.cardDetailRow}>
+              <Ionicons name="receipt-outline" size={13} color="#e0a800" />
+              <Text style={styles.ref}>UPI Ref: {item.upiReference}</Text>
+            </View>
           </View>
         )}
         ListEmptyComponent={
-          <Text style={styles.empty}>No settlement history</Text>
+          <View style={styles.emptyBox}>
+            <Ionicons name="document-text-outline" size={36} color="#c2b280" />
+            <Text style={styles.empty}>No settlement history</Text>
+          </View>
         }
       />
     </View>
@@ -67,43 +87,83 @@ export default function SettlementHistory() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#1a102b",
-    padding: 20,
+    backgroundColor: "#f7f5f0",
   },
   center: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#1a102b",
+    backgroundColor: "#f7f5f0",
+  },
+  headerBar: {
+    backgroundColor: "#2d1e3f",
+    paddingTop: 50,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
   },
   header: {
-    fontSize: 24,
-    fontWeight: "bold",
+    fontSize: 22,
+    fontWeight: "700",
     color: "#e0c878",
-    marginBottom: 20,
   },
+  headerSubtitle: {
+    fontSize: 12,
+    color: "#b7a9c9",
+    marginTop: 4,
+  },
+  listContent: { padding: 16, paddingBottom: 100 },
   card: {
-    backgroundColor: "#2d1e3f",
-    padding: 15,
-    borderRadius: 15,
-    marginBottom: 15,
+    backgroundColor: "#fff",
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: "#f0ebe0",
+    shadowColor: "#2d1e3f",
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
+  },
+  cardTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 10,
+  },
+  iconBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#eafbea",
+    alignItems: "center",
+    justifyContent: "center",
   },
   amount: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#4ade80",
+    fontSize: 19,
+    fontWeight: "800",
+    color: "#2d1e3f",
+  },
+  cardDetailRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 4,
   },
   date: {
-    color: "#cccccc",
-    marginTop: 5,
+    color: "#8a7f6a",
+    fontSize: 12,
   },
   ref: {
-    color: "#facc15",
-    marginTop: 5,
+    color: "#8a6d1f",
+    fontSize: 12,
   },
+  emptyBox: { alignItems: "center", marginTop: 80, gap: 10 },
   empty: {
-    color: "#aaa",
+    color: "#a89f8c",
     textAlign: "center",
-    marginTop: 50,
+    fontSize: 14,
   },
 });
