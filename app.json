@@ -1,10 +1,10 @@
 {
   "expo": {
-    "name": "frontend",
+    "name": "AstroConnect",
     "slug": "frontend",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/astroconnecticon.png",
     "scheme": "frontend",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": false,
